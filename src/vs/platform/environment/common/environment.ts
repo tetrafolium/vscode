@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ParsedArgs } from 'vs/platform/environment/node/argv';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 
 export const IEnvironmentService = createDecorator<IEnvironmentService>('environmentService');
@@ -10,10 +11,13 @@ export const IEnvironmentService = createDecorator<IEnvironmentService>('environ
 export interface IEnvironmentService {
 	_serviceBrand: any;
 
+	args: ParsedArgs;
+
 	execPath: string;
 	appRoot: string;
 
 	userHome: string;
+	userProductHome: string;
 	userDataPath: string;
 
 	appSettingsHome: string;
@@ -31,6 +35,7 @@ export interface IEnvironmentService {
 
 	isBuilt: boolean;
 	verbose: boolean;
+	wait: boolean;
 	performance: boolean;
 
 	mainIPCHandle: string;

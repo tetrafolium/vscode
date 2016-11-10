@@ -30,10 +30,10 @@ export class Query {
 		let result = this.value;
 
 		if (this.sortBy) {
-			result = `${ result }${ result ? ' ' : '' }@sort:${ this.sortBy }`;
+			result = `${result}${result ? ' ' : ''}@sort:${this.sortBy}`;
 
 			if (this.sortOrder) {
-				result = `${ result }-${ this.sortOrder }`;
+				result = `${result}-${this.sortOrder}`;
 			}
 		}
 
@@ -41,7 +41,7 @@ export class Query {
 	}
 
 	isValid(): boolean {
-		return !!this.sortBy || !this.sortOrder;
+		return !/@outdated/.test(this.value) && (!!this.sortBy || !this.sortOrder);
 	}
 
 	equals(other: Query): boolean {

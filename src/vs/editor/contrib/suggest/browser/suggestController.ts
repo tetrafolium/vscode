@@ -15,7 +15,7 @@ import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ICommonCodeEditor, IEditorContribution, EditorContextKeys, ModeContextKeys } from 'vs/editor/common/editorCommon';
 import { editorAction, ServicesAccessor, EditorAction, EditorCommand, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
-import { EditorBrowserRegistry } from 'vs/editor/browser/editorBrowserExtensions';
+import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { EditOperation } from 'vs/editor/common/core/editOperation';
 import { CodeSnippet } from 'vs/editor/contrib/snippet/common/snippet';
 import { SnippetController } from 'vs/editor/contrib/snippet/common/snippetController';
@@ -24,6 +24,7 @@ import { SuggestModel } from '../common/suggestModel';
 import { ICompletionItem } from '../common/completionModel';
 import { SuggestWidget } from './suggestWidget';
 
+@editorContribution
 export class SuggestController implements IEditorContribution {
 	private static ID: string = 'editor.contrib.suggestController';
 
@@ -104,6 +105,17 @@ export class SuggestController implements IEditorContribution {
 				this.telemetryService.publicLog('suggestSnippetInsert', {
 					hasPlaceholders: snippet.placeHolders.length > 0
 				});
+
+				// telemetry experiment to figure out which extensions use
+				// the internal snippet syntax today and which use the tm
+				// snippet syntax (by accident?)
+				if (suggestion._extensionId) {
+					this.telemetryService.publicLog('suggestSnippetInsert2', {
+						extension: suggestion._extensionId,
+						internalPlaceholders: snippet.placeHolders.length,
+						tmPlaceholders: CodeSnippet.fromTextmate(suggestion.insertText).placeHolders.length
+					});
+				}
 			}
 		}
 
@@ -112,6 +124,7 @@ export class SuggestController implements IEditorContribution {
 
 	triggerSuggest(): void {
 		this.model.trigger(false, false);
+		this.editor.revealLine(this.editor.getPosition().lineNumber);
 		this.editor.focus();
 	}
 
@@ -176,7 +189,7 @@ export class TriggerSuggestAction extends EditorAction {
 		});
 	}
 
-	public run(accessor:ServicesAccessor, editor:ICommonCodeEditor): void {
+	public run(accessor: ServicesAccessor, editor: ICommonCodeEditor): void {
 		SuggestController.get(editor).triggerSuggest();
 	}
 }
@@ -281,5 +294,3 @@ CommonEditorRegistry.registerEditorCommand(new SuggestCommand({
 		mac: { primary: KeyMod.WinCtrl | KeyCode.Space }
 	}
 }));
-
-EditorBrowserRegistry.registerEditorContribution(SuggestController);

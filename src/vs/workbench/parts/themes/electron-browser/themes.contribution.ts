@@ -5,20 +5,20 @@
 
 'use strict';
 
-import {localize} from 'vs/nls';
-import {TPromise} from 'vs/base/common/winjs.base';
-import {Action} from 'vs/base/common/actions';
-import {firstIndex} from 'vs/base/common/arrays';
-import {SyncActionDescriptor} from 'vs/platform/actions/common/actions';
-import {IMessageService, Severity} from 'vs/platform/message/common/message';
-import {Registry} from 'vs/platform/platform';
-import {IWorkbenchActionRegistry, Extensions} from 'vs/workbench/common/actionRegistry';
-import {IQuickOpenService, IPickOpenEntry} from 'vs/workbench/services/quickopen/common/quickOpenService';
-import {IThemeService} from 'vs/workbench/services/themes/common/themeService';
-import {VIEWLET_ID, IExtensionsViewlet} from 'vs/workbench/parts/extensions/electron-browser/extensions';
-import {IExtensionGalleryService} from 'vs/platform/extensionManagement/common/extensionManagement';
-import {IViewletService} from 'vs/workbench/services/viewlet/common/viewletService';
-import {Delayer} from 'vs/base/common/async';
+import { localize } from 'vs/nls';
+import { TPromise } from 'vs/base/common/winjs.base';
+import { Action } from 'vs/base/common/actions';
+import { firstIndex } from 'vs/base/common/arrays';
+import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
+import { IMessageService, Severity } from 'vs/platform/message/common/message';
+import { Registry } from 'vs/platform/platform';
+import { IWorkbenchActionRegistry, Extensions } from 'vs/workbench/common/actionRegistry';
+import { IQuickOpenService, IPickOpenEntry } from 'vs/workbench/services/quickopen/common/quickOpenService';
+import { IThemeService } from 'vs/workbench/services/themes/common/themeService';
+import { VIEWLET_ID, IExtensionsViewlet } from 'vs/workbench/parts/extensions/common/extensions';
+import { IExtensionGalleryService } from 'vs/platform/extensionManagement/common/extensionManagement';
+import { IViewletService } from 'vs/workbench/services/viewlet/common/viewletService';
+import { Delayer } from 'vs/base/common/async';
 
 class SelectColorThemeAction extends Action {
 
@@ -42,13 +42,18 @@ class SelectColorThemeAction extends Action {
 			const currentThemeId = this.themeService.getColorTheme();
 			const currentTheme = themes.filter(theme => theme.id === currentThemeId)[0];
 
+			const pickInMarketPlace = findInMarketplacePick(this.viewletService, 'category:themes');
+
 			const picks: IPickOpenEntry[] = themes
 				.map(theme => ({ id: theme.id, label: theme.label, description: theme.description }))
 				.sort((t1, t2) => t1.label.localeCompare(t2.label));
 
 			const selectTheme = (theme, broadcast) => {
+				if (theme === pickInMarketPlace) {
+					theme = currentTheme;
+				}
 				this.themeService.setColorTheme(theme.id, broadcast)
-					.done(null, err => this.messageService.show(Severity.Info, localize('problemChangingTheme', "Problem loading theme: {0}", err.message)));
+					.done(null, err => this.messageService.show(Severity.Info, localize('problemChangingTheme', "Problem loading theme: {0}", err)));
 			};
 
 			const placeHolder = localize('themes.selectTheme', "Select Color Theme");
@@ -56,29 +61,14 @@ class SelectColorThemeAction extends Action {
 			const delayer = new Delayer<void>(100);
 
 			if (this.extensionGalleryService.isEnabled()) {
-				const run = () => {
-					return this.viewletService.openViewlet(VIEWLET_ID, true)
-						.then(viewlet => viewlet as IExtensionsViewlet)
-						.then(viewlet => {
-							viewlet.search('category:themes');
-							viewlet.focus();
-						});
-				};
-
-				picks.push({
-					id: 'themes.findmore',
-					label: localize('findMore', "Find more in the Marketplace..."),
-					separator: { border: true },
-					alwaysShow: true,
-					run
-				});
+				picks.push(pickInMarketPlace);
 			}
 
-			return this.quickOpenService.pick(picks, { placeHolder, autoFocus: { autoFocusIndex }})
+			return this.quickOpenService.pick(picks, { placeHolder, autoFocus: { autoFocusIndex } })
 				.then(
-					theme => delayer.trigger(() => selectTheme(theme || currentTheme, true), 0),
-					null,
-					theme => delayer.trigger(() => selectTheme(theme, false))
+				theme => delayer.trigger(() => selectTheme(theme || currentTheme, true), 0),
+				null,
+				theme => delayer.trigger(() => selectTheme(theme, false))
 				);
 		});
 	}
@@ -106,6 +96,8 @@ class SelectIconThemeAction extends Action {
 			const currentThemeId = this.themeService.getFileIconTheme();
 			const currentTheme = themes.filter(theme => theme.id === currentThemeId)[0];
 
+			const pickInMarketPlace = findInMarketplacePick(this.viewletService, 'tag:icon-theme');
+
 			const picks: IPickOpenEntry[] = themes
 				.map(theme => ({ id: theme.id, label: theme.label, description: theme.description }))
 				.sort((t1, t2) => t1.label.localeCompare(t2.label));
@@ -113,6 +105,9 @@ class SelectIconThemeAction extends Action {
 			picks.splice(0, 0, { id: '', label: localize('noIconThemeLabel', 'None'), description: localize('noIconThemeDesc', 'Disable file icons') });
 
 			const selectTheme = (theme, broadcast) => {
+				if (theme === pickInMarketPlace) {
+					theme = currentTheme;
+				}
 				this.themeService.setFileIconTheme(theme && theme.id, broadcast)
 					.done(null, err => this.messageService.show(Severity.Info, localize('problemChangingIconTheme', "Problem loading icon theme: {0}", err.message)));
 			};
@@ -121,33 +116,32 @@ class SelectIconThemeAction extends Action {
 			const autoFocusIndex = firstIndex(picks, p => p.id === currentThemeId);
 			const delayer = new Delayer<void>(100);
 
-		/*	if (this.extensionGalleryService.isEnabled()) {
-				const run = () => {
-					return this.viewletService.openViewlet(VIEWLET_ID, true)
-						.then(viewlet => viewlet as IExtensionsViewlet)
-						.then(viewlet => {
-							viewlet.search('category:themes', true); // define our own category
-							viewlet.focus();
-						});
-				};
 
-				picks.push({
-					id: 'themes.findmoreiconthemes',
-					label: localize('findMoreIconThemes', "Find more in the Marketplace..."),
-					separator: { border: true },
-					alwaysShow: true,
-					run
-				});
-			}*/
+			if (this.extensionGalleryService.isEnabled()) {
+				picks.push(pickInMarketPlace);
+			}
 
-			return this.quickOpenService.pick(picks, { placeHolder, autoFocus: { autoFocusIndex }})
+			return this.quickOpenService.pick(picks, { placeHolder, autoFocus: { autoFocusIndex } })
 				.then(
-					theme => delayer.trigger(() => selectTheme(theme || currentTheme, true), 0),
-					null,
-					theme => delayer.trigger(() => selectTheme(theme, false))
+				theme => delayer.trigger(() => selectTheme(theme || currentTheme, true), 0),
+				null,
+				theme => delayer.trigger(() => selectTheme(theme, false))
 				);
 		});
 	}
+}
+
+function findInMarketplacePick(viewletService: IViewletService, query: string) {
+	return {
+		id: 'themes.findmore',
+		label: localize('findMore', "Find more in the Marketplace..."),
+		separator: { border: true },
+		alwaysShow: true,
+		run: () => viewletService.openViewlet(VIEWLET_ID, true).then(viewlet => {
+			(<IExtensionsViewlet>viewlet).search(query);
+			viewlet.focus();
+		})
+	};
 }
 
 const category = localize('preferences', "Preferences");

@@ -4,16 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import {TPromise} from 'vs/base/common/winjs.base';
+import { TPromise } from 'vs/base/common/winjs.base';
 import * as objects from 'vs/base/common/objects';
-import {getDefaultValues, flatten} from 'vs/platform/configuration/common/model';
-import {ConfigWatcher} from 'vs/base/node/config';
-import {Registry} from 'vs/platform/platform';
-import {IConfigurationRegistry, Extensions} from 'vs/platform/configuration/common/configurationRegistry';
-import {IDisposable, dispose, toDisposable} from 'vs/base/common/lifecycle';
-import {IConfigurationService, IConfigurationServiceEvent, IConfigurationValue, getConfigurationValue} from 'vs/platform/configuration/common/configuration';
-import Event, {Emitter} from 'vs/base/common/event';
-import {IEnvironmentService} from 'vs/platform/environment/common/environment';
+import { getDefaultValues, flatten, getConfigurationKeys } from 'vs/platform/configuration/common/model';
+import { ConfigWatcher } from 'vs/base/node/config';
+import { Registry } from 'vs/platform/platform';
+import { IConfigurationRegistry, Extensions } from 'vs/platform/configuration/common/configurationRegistry';
+import { IDisposable, dispose, toDisposable } from 'vs/base/common/lifecycle';
+import { IConfigurationService, IConfigurationServiceEvent, IConfigurationValue, getConfigurationValue, IConfigurationKeys } from 'vs/platform/configuration/common/configuration';
+import Event, { Emitter } from 'vs/base/common/event';
+import { IEnvironmentService } from 'vs/platform/environment/common/environment';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 
 export class ConfigurationService<T> implements IConfigurationService, IDisposable {
 
@@ -25,6 +26,8 @@ export class ConfigurationService<T> implements IConfigurationService, IDisposab
 	private cache: T;
 
 	private _onDidUpdateConfiguration: Emitter<IConfigurationServiceEvent>;
+
+	private _telemetryService: ITelemetryService;
 
 	constructor(
 		@IEnvironmentService environmentService: IEnvironmentService
@@ -38,7 +41,12 @@ export class ConfigurationService<T> implements IConfigurationService, IDisposab
 		this.disposables.push(toDisposable(() => this.rawConfig.dispose()));
 
 		// Listeners
-		this.disposables.push(this.rawConfig.onDidUpdateConfiguration(config => this.onConfigurationChange()));
+		this.disposables.push(this.rawConfig.onDidUpdateConfiguration(event => {
+			this.onConfigurationChange();
+			if (this._telemetryService) {
+				this._telemetryService.publicLog('updateUserConfiguration', { userConfigurationKeys: Object.keys(event.config) });
+			}
+		}));
 		this.disposables.push(Registry.as<IConfigurationRegistry>(Extensions.Configuration).onDidRegisterConfiguration(() => this.onConfigurationChange()));
 	}
 
@@ -73,10 +81,18 @@ export class ConfigurationService<T> implements IConfigurationService, IDisposab
 	}
 
 	public lookup<C>(key: string): IConfigurationValue<C> {
+		// make sure to clone the configuration so that the receiver does not tamper with the values
 		return {
-			default: getConfigurationValue<C>(getDefaultValues(), key),
-			user: getConfigurationValue<C>(flatten(this.rawConfig.getConfig()), key),
-			value: getConfigurationValue<C>(this.getConfiguration(), key)
+			default: objects.clone(getConfigurationValue<C>(getDefaultValues(), key)),
+			user: objects.clone(getConfigurationValue<C>(flatten(this.rawConfig.getConfig()), key)),
+			value: objects.clone(getConfigurationValue<C>(this.getConfiguration(), key))
+		};
+	}
+
+	public keys(): IConfigurationKeys {
+		return {
+			default: getConfigurationKeys(),
+			user: Object.keys(this.rawConfig.getConfig())
 		};
 	}
 
@@ -93,5 +109,9 @@ export class ConfigurationService<T> implements IConfigurationService, IDisposab
 
 	public dispose(): void {
 		this.disposables = dispose(this.disposables);
+	}
+
+	public set telemetryService(value: ITelemetryService) {
+		this._telemetryService = value;
 	}
 }
