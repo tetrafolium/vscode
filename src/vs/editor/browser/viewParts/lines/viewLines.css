@@ -14,25 +14,14 @@
 	100% { background-color: none }
 }*/
 
-.monaco-editor .lines-content,
-.monaco-editor .view-line,
-.monaco-editor .view-line > span,
-.monaco-editor .view-line > span > span,
-.monaco-editor .view-lines {
-	-webkit-user-select: text;
-	-ms-user-select: text;
-	-khtml-user-select: text;
-	-moz-user-select: text;
-	-o-user-select: text;
-	user-select: text;
-}
-
-.monaco-editor.ie .lines-content,
-.monaco-editor.ie .view-line,
-.monaco-editor.ie .view-line > span,
-.monaco-editor.ie .view-line > span > span,
-.monaco-editor.ie .view-lines {
+.monaco-editor.no-user-select .lines-content,
+.monaco-editor.no-user-select .view-line,
+.monaco-editor.no-user-select .view-lines {
+	-webkit-user-select: none;
 	-ms-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-o-user-select: none;
 	user-select: none;
 }
 
@@ -51,14 +40,9 @@
 	width: 100%;
 }
 
-.monaco-editor .lines-content {
-	position: absolute;
-	top: 0;
-}
-
-/* bootstrap fix */
-.monaco-editor .view-line > span > span {
+/* TODO@tokenization bootstrap fix */
+/*.monaco-editor .view-line > span > span {
 	float: none;
 	min-height: inherit;
 	margin-left: inherit;
-}
+}*/

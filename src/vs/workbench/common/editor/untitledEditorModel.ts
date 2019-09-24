@@ -2,102 +2,96 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
-import { IDisposable } from 'vs/base/common/lifecycle';
-import { TPromise } from 'vs/base/common/winjs.base';
-import { EditorModel, IEncodingSupport } from 'vs/workbench/common/editor';
-import { StringEditorModel } from 'vs/workbench/common/editor/stringEditorModel';
-import URI from 'vs/base/common/uri';
-import { PLAINTEXT_MODE_ID } from 'vs/editor/common/modes/modesRegistry';
-import { EndOfLinePreference } from 'vs/editor/common/editorCommon';
-import { IFilesConfiguration } from 'vs/platform/files/common/files';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IEncodingSupport } from 'vs/workbench/common/editor';
+import { BaseTextEditorModel } from 'vs/workbench/common/editor/textEditorModel';
+import { URI } from 'vs/base/common/uri';
+import { CONTENT_CHANGE_EVENT_BUFFER_DELAY } from 'vs/platform/files/common/files';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { IModelService } from 'vs/editor/common/services/modelService';
-import { IMode } from 'vs/editor/common/modes';
-import Event, { Emitter } from 'vs/base/common/event';
+import { Event, Emitter } from 'vs/base/common/event';
+import { RunOnceScheduler } from 'vs/base/common/async';
+import { IBackupFileService, IResolvedBackup } from 'vs/workbench/services/backup/common/backup';
+import { ITextResourceConfigurationService } from 'vs/editor/common/services/resourceConfiguration';
+import { ITextBufferFactory } from 'vs/editor/common/model';
+import { createTextBufferFactory } from 'vs/editor/common/model/textModel';
+import { IResolvedTextEditorModel } from 'vs/editor/common/services/resolverService';
 
-export class UntitledEditorModel extends StringEditorModel implements IEncodingSupport {
-	private textModelChangeListener: IDisposable;
-	private configurationChangeListener: IDisposable;
+export class UntitledEditorModel extends BaseTextEditorModel implements IEncodingSupport {
 
-	private dirty: boolean;
-	private _onDidChangeDirty: Emitter<void>;
-	private _onDidChangeEncoding: Emitter<void>;
+	static DEFAULT_CONTENT_CHANGE_BUFFER_DELAY = CONTENT_CHANGE_EVENT_BUFFER_DELAY;
 
+	private readonly _onDidChangeContent: Emitter<void> = this._register(new Emitter<void>());
+	readonly onDidChangeContent: Event<void> = this._onDidChangeContent.event;
+
+	private readonly _onDidChangeDirty: Emitter<void> = this._register(new Emitter<void>());
+	readonly onDidChangeDirty: Event<void> = this._onDidChangeDirty.event;
+
+	private readonly _onDidChangeEncoding: Emitter<void> = this._register(new Emitter<void>());
+	readonly onDidChangeEncoding: Event<void> = this._onDidChangeEncoding.event;
+
+	private dirty: boolean = false;
+	private versionId: number = 0;
+	private readonly contentChangeEventScheduler: RunOnceScheduler;
 	private configuredEncoding: string;
-	private preferredEncoding: string;
-
-	private hasAssociatedFilePath: boolean;
 
 	constructor(
-		value: string,
-		modeId: string,
-		resource: URI,
-		hasAssociatedFilePath: boolean,
+		private readonly preferredMode: string,
+		private readonly resource: URI,
+		private _hasAssociatedFilePath: boolean,
+		private readonly initialValue: string,
+		private preferredEncoding: string,
 		@IModeService modeService: IModeService,
 		@IModelService modelService: IModelService,
-		@IConfigurationService private configurationService: IConfigurationService
+		@IBackupFileService private readonly backupFileService: IBackupFileService,
+		@ITextResourceConfigurationService private readonly configurationService: ITextResourceConfigurationService
 	) {
-		super(value, modeId, resource, modeService, modelService);
+		super(modelService, modeService);
 
-		this.hasAssociatedFilePath = hasAssociatedFilePath;
-		this.dirty = hasAssociatedFilePath; // untitled associated to file path are dirty right away
-
-		this._onDidChangeDirty = new Emitter<void>();
-		this._onDidChangeEncoding = new Emitter<void>();
+		this.contentChangeEventScheduler = this._register(new RunOnceScheduler(() => this._onDidChangeContent.fire(), UntitledEditorModel.DEFAULT_CONTENT_CHANGE_BUFFER_DELAY));
 
 		this.registerListeners();
 	}
 
-	public get onDidChangeDirty(): Event<void> {
-		return this._onDidChangeDirty.event;
-	}
-
-	public get onDidChangeEncoding(): Event<void> {
-		return this._onDidChangeEncoding.event;
-	}
-
-	protected getOrCreateMode(modeService: IModeService, modeId: string, firstLineText?: string): TPromise<IMode> {
-		if (!modeId || modeId === PLAINTEXT_MODE_ID) {
-			return modeService.getOrCreateModeByFilenameOrFirstLine(this.resource.fsPath, firstLineText); // lookup mode via resource path if the provided modeId is unspecific
-		}
-
-		return super.getOrCreateMode(modeService, modeId, firstLineText);
+	get hasAssociatedFilePath(): boolean {
+		return this._hasAssociatedFilePath;
 	}
 
 	private registerListeners(): void {
 
 		// Config Changes
-		this.configurationChangeListener = this.configurationService.onDidUpdateConfiguration(e => this.onConfigurationChange(e.config));
+		this._register(this.configurationService.onDidChangeConfiguration(e => this.onConfigurationChange()));
 	}
 
-	private onConfigurationChange(configuration: IFilesConfiguration): void {
-		this.configuredEncoding = configuration && configuration.files && configuration.files.encoding;
-	}
+	private onConfigurationChange(): void {
+		const configuredEncoding = this.configurationService.getValue<string>(this.resource, 'files.encoding');
 
-	public getValue(): string {
-		if (this.textEditorModel) {
-			return this.textEditorModel.getValue(EndOfLinePreference.TextDefined, true /* Preserve BOM */);
+		if (this.configuredEncoding !== configuredEncoding) {
+			this.configuredEncoding = configuredEncoding;
+
+			if (!this.preferredEncoding) {
+				this._onDidChangeEncoding.fire(); // do not fire event if we have a preferred encoding set
+			}
 		}
-
-		return null;
 	}
 
-	public getModeId(): string {
+	getVersionId(): number {
+		return this.versionId;
+	}
+
+	getMode(): string | undefined {
 		if (this.textEditorModel) {
 			return this.textEditorModel.getModeId();
 		}
 
-		return null;
+		return this.preferredMode;
 	}
 
-	public getEncoding(): string {
+	getEncoding(): string {
 		return this.preferredEncoding || this.configuredEncoding;
 	}
 
-	public setEncoding(encoding: string): void {
+	setEncoding(encoding: string): void {
 		const oldEncoding = this.getEncoding();
 		this.preferredEncoding = encoding;
 
@@ -107,62 +101,109 @@ export class UntitledEditorModel extends StringEditorModel implements IEncodingS
 		}
 	}
 
-	public isDirty(): boolean {
+	isDirty(): boolean {
 		return this.dirty;
 	}
 
-	public revert(): void {
-		this.dirty = false;
+	private setDirty(dirty: boolean): void {
+		if (this.dirty === dirty) {
+			return;
+		}
 
+		this.dirty = dirty;
 		this._onDidChangeDirty.fire();
 	}
 
-	public load(): TPromise<EditorModel> {
-		return super.load().then((model) => {
-			const configuration = this.configurationService.getConfiguration<IFilesConfiguration>();
+	getResource(): URI {
+		return this.resource;
+	}
 
-			// Encoding
-			this.configuredEncoding = configuration && configuration.files && configuration.files.encoding;
+	revert(): void {
+		this.setDirty(false);
 
-			// Listen to content changes
-			this.textModelChangeListener = this.textEditorModel.onDidChangeContent(e => this.onModelContentChanged());
+		// Handle content change event buffered
+		this.contentChangeEventScheduler.schedule();
+	}
 
-			return model;
-		});
+	backup(): Promise<void> {
+		if (this.isResolved()) {
+			return this.backupFileService.backupResource(this.resource, this.createSnapshot(), this.versionId);
+		}
+
+		return Promise.resolve();
+	}
+
+	hasBackup(): boolean {
+		return this.backupFileService.hasBackupSync(this.resource, this.versionId);
+	}
+
+	async load(): Promise<UntitledEditorModel & IResolvedTextEditorModel> {
+
+		// Check for backups first
+		let backup: IResolvedBackup<object> | undefined = undefined;
+		const backupResource = await this.backupFileService.loadBackupResource(this.resource);
+		if (backupResource) {
+			backup = await this.backupFileService.resolveBackupContent(backupResource);
+		}
+
+		// untitled associated to file path are dirty right away as well as untitled with content
+		this.setDirty(this._hasAssociatedFilePath || !!backup || !!this.initialValue);
+
+		let untitledContents: ITextBufferFactory;
+		if (backup) {
+			untitledContents = backup.value;
+		} else {
+			untitledContents = createTextBufferFactory(this.initialValue || '');
+		}
+
+		// Create text editor model if not yet done
+		if (!this.textEditorModel) {
+			this.createTextEditorModel(untitledContents, this.resource, this.preferredMode);
+		}
+
+		// Otherwise update
+		else {
+			this.updateTextEditorModel(untitledContents, this.preferredMode);
+		}
+
+		// Encoding
+		this.configuredEncoding = this.configurationService.getValue<string>(this.resource, 'files.encoding');
+
+		// We know for a fact there is a text editor model here
+		const textEditorModel = this.textEditorModel!;
+
+		// Listen to content changes
+		this._register(textEditorModel.onDidChangeContent(() => this.onModelContentChanged()));
+
+		// Listen to mode changes
+		this._register(textEditorModel.onDidChangeLanguage(() => this.onConfigurationChange())); // mode change can have impact on config
+
+		return this as UntitledEditorModel & IResolvedTextEditorModel;
 	}
 
 	private onModelContentChanged(): void {
+		if (!this.isResolved()) {
+			return;
+		}
+
+		this.versionId++;
 
 		// mark the untitled editor as non-dirty once its content becomes empty and we do
 		// not have an associated path set. we never want dirty indicator in that case.
-		if (!this.hasAssociatedFilePath && this.textEditorModel.getLineCount() === 1 && this.textEditorModel.getLineContent(1) === '') {
-			if (this.dirty) {
-				this.dirty = false;
-				this._onDidChangeDirty.fire();
-			}
+		if (!this._hasAssociatedFilePath && this.textEditorModel && this.textEditorModel.getLineCount() === 1 && this.textEditorModel.getLineContent(1) === '') {
+			this.setDirty(false);
 		}
 
-		// turn dirty if we were not
-		else if (!this.dirty) {
-			this.dirty = true;
-			this._onDidChangeDirty.fire();
+		// turn dirty otherwise
+		else {
+			this.setDirty(true);
 		}
+
+		// Handle content change event buffered
+		this.contentChangeEventScheduler.schedule();
 	}
 
-	public dispose(): void {
-		super.dispose();
-
-		if (this.textModelChangeListener) {
-			this.textModelChangeListener.dispose();
-			this.textModelChangeListener = null;
-		}
-
-		if (this.configurationChangeListener) {
-			this.configurationChangeListener.dispose();
-			this.configurationChangeListener = null;
-		}
-
-		this._onDidChangeDirty.dispose();
-		this._onDidChangeEncoding.dispose();
+	isReadonly(): boolean {
+		return false;
 	}
 }

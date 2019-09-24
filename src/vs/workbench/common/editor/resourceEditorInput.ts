@@ -2,33 +2,30 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
-import { TPromise } from 'vs/base/common/winjs.base';
-import { EditorInput, ITextEditorModel } from 'vs/workbench/common/editor';
-import URI from 'vs/base/common/uri';
-import { ITextModelResolverService } from 'vs/platform/textmodelResolver/common/resolver';
+import { EditorInput, ITextEditorModel, IModeSupport } from 'vs/workbench/common/editor';
+import { URI } from 'vs/base/common/uri';
+import { IReference } from 'vs/base/common/lifecycle';
+import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { ResourceEditorModel } from 'vs/workbench/common/editor/resourceEditorModel';
 
 /**
  * A read-only text editor input whos contents are made of the provided resource that points to an existing
  * code editor model.
  */
-export class ResourceEditorInput extends EditorInput {
+export class ResourceEditorInput extends EditorInput implements IModeSupport {
 
-	public static ID: string = 'workbench.editors.resourceEditorInput';
+	static readonly ID: string = 'workbench.editors.resourceEditorInput';
 
-	protected cachedModel: ResourceEditorModel;
-	protected resource: URI;
-
-	private name: string;
-	private description: string;
+	private cachedModel: ResourceEditorModel | null = null;
+	private modelReference: Promise<IReference<ITextEditorModel>> | null = null;
 
 	constructor(
-		name: string,
-		description: string,
-		resource: URI,
-		@ITextModelResolverService private textModelResolverService: ITextModelResolverService
+		private name: string,
+		private description: string | undefined,
+		private readonly resource: URI,
+		private preferredMode: string | undefined,
+		@ITextModelService private readonly textModelResolverService: ITextModelService
 	) {
 		super();
 
@@ -37,77 +34,95 @@ export class ResourceEditorInput extends EditorInput {
 		this.resource = resource;
 	}
 
-	public getTypeId(): string {
+	getResource(): URI {
+		return this.resource;
+	}
+
+	getTypeId(): string {
 		return ResourceEditorInput.ID;
 	}
 
-	public getName(): string {
+	getName(): string {
 		return this.name;
 	}
 
-	public setName(name: string): void {
+	setName(name: string): void {
 		if (this.name !== name) {
 			this.name = name;
 			this._onDidChangeLabel.fire();
 		}
 	}
 
-	public getDescription(): string {
+	getDescription(): string | undefined {
 		return this.description;
 	}
 
-	public setDescription(description: string): void {
+	setDescription(description: string): void {
 		if (this.description !== description) {
 			this.description = description;
 			this._onDidChangeLabel.fire();
 		}
 	}
 
-	public resolve(refresh?: boolean): TPromise<ITextEditorModel> {
+	setMode(mode: string): void {
+		this.setPreferredMode(mode);
 
-		// Use Cached Model
 		if (this.cachedModel) {
-			return TPromise.as<ITextEditorModel>(this.cachedModel);
+			this.cachedModel.setMode(mode);
 		}
-
-		// Otherwise Create Model and handle dispose event
-		return this.textModelResolverService.resolve(this.resource).then(model => {
-			if (!(model instanceof ResourceEditorModel)) {
-				return TPromise.wrapError(`Unexpected model for ResourceInput: ${this.resource}`); // TODO@Ben eventually also files should be supported, but we guard due to the dangerous dispose of the model in dispose()
-			}
-
-			this.cachedModel = model;
-
-			const unbind = model.onDispose(() => {
-				this.cachedModel = null; // make sure we do not dispose model again
-				unbind.dispose();
-				this.dispose();
-			});
-
-			return this.cachedModel;
-		});
 	}
 
-	public matches(otherInput: any): boolean {
+	setPreferredMode(mode: string): void {
+		this.preferredMode = mode;
+	}
+
+	async resolve(): Promise<ITextEditorModel> {
+		if (!this.modelReference) {
+			this.modelReference = this.textModelResolverService.createModelReference(this.resource);
+		}
+
+		const ref = await this.modelReference;
+
+		const model = ref.object;
+
+		// Ensure the resolved model is of expected type
+		if (!(model instanceof ResourceEditorModel)) {
+			ref.dispose();
+			this.modelReference = null;
+
+			throw new Error(`Unexpected model for ResourceInput: ${this.resource}`);
+		}
+
+		this.cachedModel = model;
+
+		// Set mode if we have a preferred mode configured
+		if (this.preferredMode) {
+			model.setMode(this.preferredMode);
+		}
+
+		return model;
+	}
+
+	matches(otherInput: unknown): boolean {
 		if (super.matches(otherInput) === true) {
 			return true;
 		}
 
+		// Compare by properties
 		if (otherInput instanceof ResourceEditorInput) {
-			let otherResourceEditorInput = <ResourceEditorInput>otherInput;
-
-			// Compare by properties
-			return otherResourceEditorInput.resource.toString() === this.resource.toString();
+			return otherInput.resource.toString() === this.resource.toString();
 		}
 
 		return false;
 	}
 
-	public dispose(): void {
-		if (this.cachedModel) {
-			this.cachedModel.dispose();
-			this.cachedModel = null;
+	dispose(): void {
+		if (this.modelReference) {
+			this.modelReference.then(ref => ref.dispose());
+			this.modelReference = null;
 		}
+
+		this.cachedModel = null;
 
 		super.dispose();
 	}

@@ -3,206 +3,172 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import 'vs/css!./media/part';
-import { Dimension, Builder } from 'vs/base/browser/builder';
-import { WorkbenchComponent } from 'vs/workbench/common/component';
+import { Component } from 'vs/workbench/common/component';
+import { IThemeService, ITheme } from 'vs/platform/theme/common/themeService';
+import { Dimension, size } from 'vs/base/browser/dom';
+import { IStorageService } from 'vs/platform/storage/common/storage';
+import { IDimension } from 'vs/platform/layout/browser/layoutService';
+import { ISerializableView, IViewSize } from 'vs/base/browser/ui/grid/grid';
+import { Event, Emitter } from 'vs/base/common/event';
+import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
+
+export interface IPartOptions {
+	hasTitle?: boolean;
+	borderWidth?: () => number;
+}
+
+export interface ILayoutContentResult {
+	titleSize: IDimension;
+	contentSize: IDimension;
+}
 
 /**
- * Parts are layed out in the workbench and have their own layout that arranges a title,
- * content and status area to show content.
+ * Parts are layed out in the workbench and have their own layout that
+ * arranges an optional title and mandatory content area to show content.
  */
-export abstract class Part extends WorkbenchComponent {
-	private parent: Builder;
-	private titleArea: Builder;
-	private contentArea: Builder;
-	private statusArea: Builder;
+export abstract class Part extends Component implements ISerializableView {
+
+	private _dimension: Dimension;
+	get dimension(): Dimension { return this._dimension; }
+
+	private parent: HTMLElement;
+	private titleArea: HTMLElement | null = null;
+	private contentArea: HTMLElement | null = null;
 	private partLayout: PartLayout;
 
-	constructor(id: string) {
-		super(id);
+	constructor(
+		id: string,
+		private options: IPartOptions,
+		themeService: IThemeService,
+		storageService: IStorageService,
+		layoutService: IWorkbenchLayoutService
+	) {
+		super(id, themeService, storageService);
+
+		layoutService.registerPart(this);
+	}
+
+	protected onThemeChange(theme: ITheme): void {
+
+		// only call if our create() method has been called
+		if (this.parent) {
+			super.onThemeChange(theme);
+		}
+	}
+
+	updateStyles(): void {
+		super.updateStyles();
 	}
 
 	/**
 	 * Note: Clients should not call this method, the workbench calls this
 	 * method. Calling it otherwise may result in unexpected behavior.
 	 *
-	 * Called to create title, content and status area of the part.
+	 * Called to create title and content area of the part.
 	 */
-	public create(parent: Builder): void {
+	create(parent: HTMLElement, options?: object): void {
 		this.parent = parent;
-		this.titleArea = this.createTitleArea(parent);
-		this.contentArea = this.createContentArea(parent);
-		this.statusArea = this.createStatusArea(parent);
+		this.titleArea = this.createTitleArea(parent, options);
+		this.contentArea = this.createContentArea(parent, options);
 
-		this.partLayout = new PartLayout(this.parent, this.titleArea, this.contentArea, this.statusArea);
+		this.partLayout = new PartLayout(this.options, this.contentArea);
+
+		this.updateStyles();
 	}
 
 	/**
 	 * Returns the overall part container.
 	 */
-	public getContainer(): Builder {
+	getContainer(): HTMLElement {
 		return this.parent;
 	}
 
 	/**
 	 * Subclasses override to provide a title area implementation.
 	 */
-	public createTitleArea(parent: Builder): Builder {
+	protected createTitleArea(parent: HTMLElement, options?: object): HTMLElement | null {
 		return null;
 	}
 
 	/**
 	 * Returns the title area container.
 	 */
-	public getTitleArea(): Builder {
+	protected getTitleArea(): HTMLElement | null {
 		return this.titleArea;
 	}
 
 	/**
 	 * Subclasses override to provide a content area implementation.
 	 */
-	public createContentArea(parent: Builder): Builder {
+	protected createContentArea(parent: HTMLElement, options?: object): HTMLElement | null {
 		return null;
 	}
 
 	/**
 	 * Returns the content area container.
 	 */
-	public getContentArea(): Builder {
+	protected getContentArea(): HTMLElement | null {
 		return this.contentArea;
 	}
 
 	/**
-	 * Subclasses override to provide a status area implementation.
+	 * Layout title and content area in the given dimension.
 	 */
-	public createStatusArea(parent: Builder): Builder {
-		return null;
+	protected layoutContents(width: number, height: number): ILayoutContentResult {
+		return this.partLayout.layout(width, height);
 	}
 
-	/**
-	 * Returns the status area container.
-	 */
-	public getStatusArea(): Builder {
-		return this.statusArea;
+	//#region ISerializableView
+
+	private _onDidChange = this._register(new Emitter<IViewSize | undefined>());
+	get onDidChange(): Event<IViewSize | undefined> { return this._onDidChange.event; }
+
+	element: HTMLElement;
+
+	abstract minimumWidth: number;
+	abstract maximumWidth: number;
+	abstract minimumHeight: number;
+	abstract maximumHeight: number;
+
+	layout(width: number, height: number): void {
+		this._dimension = new Dimension(width, height);
 	}
 
-	/**
-	 * Layout title, content and status area in the given dimension.
-	 */
-	public layout(dimension: Dimension): Dimension[] {
-		return this.partLayout.layout(dimension);
-	}
+	abstract toJSON(): object;
 
-	/**
-	 * Returns the part layout implementation.
-	 */
-	public getLayout(): PartLayout {
-		return this.partLayout;
-	}
+	//#endregion
 }
 
-export class EmptyPart extends Part {
-	constructor(id: string) {
-		super(id);
-	}
-}
+class PartLayout {
 
-interface IContainerStyle {
-	borderLeftWidth: number;
-	borderRightWidth: number;
-	borderTopWidth: number;
-	borderBottomWidth: number;
-}
+	private static readonly TITLE_HEIGHT = 35;
 
-interface ITitleStatusStyle {
-	display: string;
-	height: number;
-}
+	constructor(private options: IPartOptions, private contentArea: HTMLElement | null) { }
 
-export class PartLayout {
-	private container: Builder;
-	private titleArea: Builder;
-	private contentArea: Builder;
-	private statusArea: Builder;
-	private titleStyle: ITitleStatusStyle;
-	private containerStyle: IContainerStyle;
-	private statusStyle: ITitleStatusStyle;
-
-	constructor(container: Builder, titleArea: Builder, contentArea: Builder, statusArea: Builder) {
-		this.container = container;
-		this.titleArea = titleArea;
-		this.contentArea = contentArea;
-		this.statusArea = statusArea;
-	}
-
-	public computeStyle(): void {
-		let containerStyle = this.container.getComputedStyle();
-		this.containerStyle = {
-			borderLeftWidth: parseInt(containerStyle.getPropertyValue('border-left-width'), 10),
-			borderRightWidth: parseInt(containerStyle.getPropertyValue('border-right-width'), 10),
-			borderTopWidth: parseInt(containerStyle.getPropertyValue('border-top-width'), 10),
-			borderBottomWidth: parseInt(containerStyle.getPropertyValue('border-bottom-width'), 10)
-		};
-
-		if (this.titleArea) {
-			let titleStyle = this.titleArea.getComputedStyle();
-			this.titleStyle = {
-				display: titleStyle.getPropertyValue('display'),
-				height: this.titleArea.getTotalSize().height
-			};
-		}
-
-		if (this.statusArea) {
-			let statusStyle = this.statusArea.getComputedStyle();
-			this.statusStyle = {
-				display: statusStyle.getPropertyValue('display'),
-				height: this.statusArea.getTotalSize().height
-			};
-		}
-	}
-
-	public layout(dimension: Dimension): Dimension[] {
-		if (!this.containerStyle) {
-			this.computeStyle();
-		}
-
-		let width = dimension.width - (this.containerStyle.borderLeftWidth + this.containerStyle.borderRightWidth);
-		let height = dimension.height - (this.containerStyle.borderTopWidth + this.containerStyle.borderBottomWidth);
-
-		// Return the applied sizes to title, content and status
-		let sizes: Dimension[] = [];
+	layout(width: number, height: number): ILayoutContentResult {
 
 		// Title Size: Width (Fill), Height (Variable)
 		let titleSize: Dimension;
-		if (this.titleArea && this.titleStyle.display !== 'none') {
-			titleSize = new Dimension(width, Math.min(height, this.titleStyle.height));
+		if (this.options && this.options.hasTitle) {
+			titleSize = new Dimension(width, Math.min(height, PartLayout.TITLE_HEIGHT));
 		} else {
 			titleSize = new Dimension(0, 0);
 		}
 
-		// Status Size: Width (Fill), Height (Variable)
-		let statusSize: Dimension;
-		if (this.statusArea && this.statusStyle.display !== 'none') {
-			this.statusArea.getHTMLElement().style.height = this.statusArea.getHTMLElement().style.width = '';
-			statusSize = new Dimension(width, Math.min(height - titleSize.height, this.statusStyle.height));
-		} else {
-			statusSize = new Dimension(0, 0);
+		let contentWidth = width;
+		if (this.options && typeof this.options.borderWidth === 'function') {
+			contentWidth -= this.options.borderWidth(); // adjust for border size
 		}
 
 		// Content Size: Width (Fill), Height (Variable)
-		let contentSize = new Dimension(width, height - titleSize.height - statusSize.height);
-
-		sizes.push(titleSize);
-		sizes.push(contentSize);
-		sizes.push(statusSize);
+		const contentSize = new Dimension(contentWidth, height - titleSize.height);
 
 		// Content
 		if (this.contentArea) {
-			this.contentArea.size(contentSize.width, contentSize.height);
+			size(this.contentArea, contentSize.width, contentSize.height);
 		}
 
-		return sizes;
+		return { titleSize, contentSize };
 	}
 }

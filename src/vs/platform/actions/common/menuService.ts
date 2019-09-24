@@ -3,104 +3,110 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
-import Event, { Emitter } from 'vs/base/common/event';
-import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { IAction } from 'vs/base/common/actions';
-import { values } from 'vs/base/common/collections';
-import { ContextKeyExpr, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { MenuId, MenuRegistry, ICommandAction, MenuItemAction, IMenu, IMenuItem, IMenuService } from 'vs/platform/actions/common/actions';
-import { IExtensionService } from 'vs/platform/extensions/common/extensions';
+import { Emitter, Event } from 'vs/base/common/event';
+import { Disposable } from 'vs/base/common/lifecycle';
+import { IMenu, IMenuActionOptions, IMenuItem, IMenuService, isIMenuItem, ISubmenuItem, MenuId, MenuItemAction, MenuRegistry, SubmenuItemAction } from 'vs/platform/actions/common/actions';
 import { ICommandService } from 'vs/platform/commands/common/commands';
-import { ResourceContextKey } from 'vs/platform/actions/common/resourceContextKey';
+import { ContextKeyExpr, IContextKeyService, IContextKeyChangeEvent } from 'vs/platform/contextkey/common/contextkey';
 
 export class MenuService implements IMenuService {
 
-	_serviceBrand: any;
+	_serviceBrand: undefined;
 
 	constructor(
-		@IExtensionService private _extensionService: IExtensionService,
-		@ICommandService private _commandService: ICommandService
+		@ICommandService private readonly _commandService: ICommandService
 	) {
 		//
 	}
 
 	createMenu(id: MenuId, contextKeyService: IContextKeyService): IMenu {
-		return new Menu(id, this._commandService, contextKeyService, this._extensionService);
-	}
-
-	getCommandActions(): ICommandAction[] {
-		return values(MenuRegistry.commands);
+		return new Menu(id, this._commandService, contextKeyService);
 	}
 }
 
-type MenuItemGroup = [string, MenuItemAction[]];
 
-class Menu implements IMenu {
+type MenuItemGroup = [string, Array<IMenuItem | ISubmenuItem>];
 
-	private _menuGroups: MenuItemGroup[] = [];
-	private _disposables: IDisposable[] = [];
-	private _onDidChange = new Emitter<IMenu>();
+class Menu extends Disposable implements IMenu {
+
+	private readonly _onDidChange = this._register(new Emitter<IMenu | undefined>());
+
+	private _menuGroups!: MenuItemGroup[];
+	private _contextKeys!: Set<string>;
 
 	constructor(
-		id: MenuId,
-		@ICommandService private _commandService: ICommandService,
-		@IContextKeyService private _contextKeyService: IContextKeyService,
-		@IExtensionService private _extensionService: IExtensionService
+		private readonly _id: MenuId,
+		@ICommandService private readonly _commandService: ICommandService,
+		@IContextKeyService private readonly _contextKeyService: IContextKeyService
 	) {
-		this._extensionService.onReady().then(_ => {
+		super();
+		this._build();
 
-			const menuItems = MenuRegistry.getMenuItems(id);
-			const keysFilter: { [key: string]: boolean } = Object.create(null);
+		// rebuild this menu whenever the menu registry reports an
+		// event for this MenuId
+		this._register(Event.debounce(
+			Event.filter(MenuRegistry.onDidChangeMenu, menuId => menuId === this._id),
+			() => { },
+			50
+		)(this._build, this));
 
-			let group: MenuItemGroup;
-			menuItems.sort(Menu._compareMenuItems);
+		// when context keys change we need to check if the menu also
+		// has changed
+		this._register(Event.debounce<IContextKeyChangeEvent, boolean>(
+			this._contextKeyService.onDidChangeContext,
+			(last, event) => last || event.affectsSome(this._contextKeys),
+			50
+		)(e => e && this._onDidChange.fire(undefined), this));
+	}
 
-			for (let item of menuItems) {
-				// group by groupId
-				const groupName = item.group;
-				if (!group || group[0] !== groupName) {
-					group = [groupName, []];
-					this._menuGroups.push(group);
-				}
-				group[1].push(new MenuItemAction(item, this._commandService));
+	private _build(): void {
 
-				// keep keys for eventing
-				Menu._fillInKbExprKeys(item.when, keysFilter);
+		// reset
+		this._menuGroups = [];
+		this._contextKeys = new Set();
+
+		const menuItems = MenuRegistry.getMenuItems(this._id);
+
+		let group: MenuItemGroup | undefined;
+		menuItems.sort(Menu._compareMenuItems);
+
+		for (let item of menuItems) {
+			// group by groupId
+			const groupName = item.group || '';
+			if (!group || group[0] !== groupName) {
+				group = [groupName, []];
+				this._menuGroups.push(group);
+			}
+			group![1].push(item);
+
+			// keep keys for eventing
+			Menu._fillInKbExprKeys(item.when, this._contextKeys);
+
+			// keep precondition keys for event if applicable
+			if (isIMenuItem(item) && item.command.precondition) {
+				Menu._fillInKbExprKeys(item.command.precondition, this._contextKeys);
 			}
 
-			// subscribe to context changes
-			this._disposables.push(this._contextKeyService.onDidChangeContext(keys => {
-				for (let k of keys) {
-					if (keysFilter[k]) {
-						this._onDidChange.fire();
-						return;
-					}
-				}
-			}));
-
-			this._onDidChange.fire(this);
-		});
+			// keep toggled keys for event if applicable
+			if (isIMenuItem(item) && item.command.toggled) {
+				Menu._fillInKbExprKeys(item.command.toggled, this._contextKeys);
+			}
+		}
+		this._onDidChange.fire(this);
 	}
 
-	dispose() {
-		this._disposables = dispose(this._disposables);
-		this._onDidChange.dispose();
-	}
-
-	get onDidChange(): Event<IMenu> {
+	get onDidChange(): Event<IMenu | undefined> {
 		return this._onDidChange.event;
 	}
 
-	getActions(): [string, IAction[]][] {
-		const result: MenuItemGroup[] = [];
+	getActions(options: IMenuActionOptions): [string, Array<MenuItemAction | SubmenuItemAction>][] {
+		const result: [string, Array<MenuItemAction | SubmenuItemAction>][] = [];
 		for (let group of this._menuGroups) {
-			const [id, actions] = group;
-			const activeActions: MenuItemAction[] = [];
-			for (let action of actions) {
-				if (this._contextKeyService.contextMatchesRules(action.item.when)) {
-					action.resource = ResourceContextKey.Resource.getValue(this._contextKeyService);
+			const [id, items] = group;
+			const activeActions: Array<MenuItemAction | SubmenuItemAction> = [];
+			for (const item of items) {
+				if (this._contextKeyService.contextMatchesRules(item.when)) {
+					const action = isIMenuItem(item) ? new MenuItemAction(item.command, item.alt, options, this._contextKeyService, this._commandService) : new SubmenuItemAction(item);
 					activeActions.push(action);
 				}
 			}
@@ -111,10 +117,10 @@ class Menu implements IMenu {
 		return result;
 	}
 
-	private static _fillInKbExprKeys(exp: ContextKeyExpr, set: { [k: string]: boolean }): void {
+	private static _fillInKbExprKeys(exp: ContextKeyExpr | undefined, set: Set<string>): void {
 		if (exp) {
 			for (let key of exp.keys()) {
-				set[key] = true;
+				set.add(key);
 			}
 		}
 	}
@@ -157,6 +163,8 @@ class Menu implements IMenu {
 		}
 
 		// sort on titles
-		return a.command.title.localeCompare(b.command.title);
+		const aTitle = typeof a.command.title === 'string' ? a.command.title : a.command.title.value;
+		const bTitle = typeof b.command.title === 'string' ? b.command.title : b.command.title.value;
+		return aTitle.localeCompare(bTitle);
 	}
 }

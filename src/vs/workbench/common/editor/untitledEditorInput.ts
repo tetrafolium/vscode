@@ -2,110 +2,174 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
-import { TPromise } from 'vs/base/common/winjs.base';
-import URI from 'vs/base/common/uri';
+import { URI } from 'vs/base/common/uri';
 import { suggestFilename } from 'vs/base/common/mime';
-import labels = require('vs/base/common/labels');
+import { memoize } from 'vs/base/common/decorators';
 import { PLAINTEXT_MODE_ID } from 'vs/editor/common/modes/modesRegistry';
-import paths = require('vs/base/common/paths');
-import { UntitledEditorInput as AbstractUntitledEditorInput, EncodingMode, ConfirmResult } from 'vs/workbench/common/editor';
+import { basenameOrAuthority, dirname } from 'vs/base/common/resources';
+import { EditorInput, IEncodingSupport, EncodingMode, ConfirmResult, Verbosity, IModeSupport } from 'vs/workbench/common/editor';
 import { UntitledEditorModel } from 'vs/workbench/common/editor/untitledEditorModel';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
-import { IModeService } from 'vs/editor/common/services/modeService';
-import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import Event, { Emitter } from 'vs/base/common/event';
+import { Event, Emitter } from 'vs/base/common/event';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
+import { ILabelService } from 'vs/platform/label/common/label';
+import { IResolvedTextEditorModel } from 'vs/editor/common/services/resolverService';
 
 /**
  * An editor input to be used for untitled text buffers.
  */
-export class UntitledEditorInput extends AbstractUntitledEditorInput {
+export class UntitledEditorInput extends EditorInput implements IEncodingSupport, IModeSupport {
 
-	public static ID: string = 'workbench.editors.untitledEditorInput';
-	public static SCHEMA: string = 'untitled';
+	static readonly ID: string = 'workbench.editors.untitledEditorInput';
 
-	private resource: URI;
-	private hasAssociatedFilePath: boolean;
-	private modeId: string;
-	private cachedModel: UntitledEditorModel;
+	private cachedModel: UntitledEditorModel | null = null;
+	private modelResolve: Promise<UntitledEditorModel & IResolvedTextEditorModel> | null = null;
 
-	private _onDidModelChangeEncoding: Emitter<void>;
+	private readonly _onDidModelChangeContent: Emitter<void> = this._register(new Emitter<void>());
+	readonly onDidModelChangeContent: Event<void> = this._onDidModelChangeContent.event;
 
-	private toUnbind: IDisposable[];
+	private readonly _onDidModelChangeEncoding: Emitter<void> = this._register(new Emitter<void>());
+	readonly onDidModelChangeEncoding: Event<void> = this._onDidModelChangeEncoding.event;
 
 	constructor(
-		resource: URI,
-		hasAssociatedFilePath: boolean,
-		modeId: string,
-		@IInstantiationService private instantiationService: IInstantiationService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@IModeService private modeService: IModeService,
-		@ITextFileService private textFileService: ITextFileService
+		private readonly resource: URI,
+		private readonly _hasAssociatedFilePath: boolean,
+		private preferredMode: string,
+		private readonly initialValue: string,
+		private preferredEncoding: string,
+		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@ITextFileService private readonly textFileService: ITextFileService,
+		@ILabelService private readonly labelService: ILabelService
 	) {
 		super();
-
-		this.resource = resource;
-		this.hasAssociatedFilePath = hasAssociatedFilePath;
-		this.modeId = modeId;
-		this.toUnbind = [];
-		this._onDidModelChangeEncoding = new Emitter<void>();
 	}
 
-	public get onDidModelChangeEncoding(): Event<void> {
-		return this._onDidModelChangeEncoding.event;
+	get hasAssociatedFilePath(): boolean {
+		return this._hasAssociatedFilePath;
 	}
 
-	public getTypeId(): string {
+	getTypeId(): string {
 		return UntitledEditorInput.ID;
 	}
 
-	public getResource(): URI {
+	getResource(): URI {
 		return this.resource;
 	}
 
-	public getName(): string {
-		return this.hasAssociatedFilePath ? paths.basename(this.resource.fsPath) : this.resource.fsPath;
+	getName(): string {
+		return this.hasAssociatedFilePath ? basenameOrAuthority(this.resource) : this.resource.path;
 	}
 
-	public getDescription(): string {
-		return this.hasAssociatedFilePath ? labels.getPathLabel(paths.dirname(this.resource.fsPath), this.contextService) : null;
+	@memoize
+	private get shortDescription(): string {
+		return this.labelService.getUriBasenameLabel(dirname(this.resource));
 	}
 
-	public isDirty(): boolean {
+	@memoize
+	private get mediumDescription(): string {
+		return this.labelService.getUriLabel(dirname(this.resource), { relative: true });
+	}
+
+	@memoize
+	private get longDescription(): string {
+		return this.labelService.getUriLabel(dirname(this.resource));
+	}
+
+	getDescription(verbosity: Verbosity = Verbosity.MEDIUM): string | undefined {
+		if (!this.hasAssociatedFilePath) {
+			return undefined;
+		}
+
+		switch (verbosity) {
+			case Verbosity.SHORT:
+				return this.shortDescription;
+			case Verbosity.LONG:
+				return this.longDescription;
+			case Verbosity.MEDIUM:
+			default:
+				return this.mediumDescription;
+		}
+	}
+
+	@memoize
+	private get shortTitle(): string {
+		return this.getName();
+	}
+
+	@memoize
+	private get mediumTitle(): string {
+		return this.labelService.getUriLabel(this.resource, { relative: true });
+	}
+
+	@memoize
+	private get longTitle(): string {
+		return this.labelService.getUriLabel(this.resource);
+	}
+
+	getTitle(verbosity: Verbosity): string | undefined {
+		if (!this.hasAssociatedFilePath) {
+			return this.getName();
+		}
+
+		switch (verbosity) {
+			case Verbosity.SHORT:
+				return this.shortTitle;
+			case Verbosity.MEDIUM:
+				return this.mediumTitle;
+			case Verbosity.LONG:
+				return this.longTitle;
+		}
+
+		return undefined;
+	}
+
+	isDirty(): boolean {
 		if (this.cachedModel) {
 			return this.cachedModel.isDirty();
 		}
 
-		return this.hasAssociatedFilePath; // untitled files with associated path are always dirty
+		// A disposed input is never dirty, even if it was restored from backup
+		if (this.isDisposed()) {
+			return false;
+		}
+
+		// untitled files with an associated path or associated resource
+		return this.hasAssociatedFilePath;
 	}
 
-	public confirmSave(): ConfirmResult {
+	hasBackup(): boolean {
+		if (this.cachedModel) {
+			return this.cachedModel.hasBackup();
+		}
+
+		return false;
+	}
+
+	confirmSave(): Promise<ConfirmResult> {
 		return this.textFileService.confirmSave([this.resource]);
 	}
 
-	public save(): TPromise<boolean> {
+	save(): Promise<boolean> {
 		return this.textFileService.save(this.resource);
 	}
 
-	public revert(): TPromise<boolean> {
+	revert(): Promise<boolean> {
 		if (this.cachedModel) {
 			this.cachedModel.revert();
 		}
 
 		this.dispose(); // a reverted untitled editor is no longer valid, so we dispose it
 
-		return TPromise.as(true);
+		return Promise.resolve(true);
 	}
 
-	public suggestFileName(): string {
+	suggestFileName(): string {
 		if (!this.hasAssociatedFilePath) {
 			if (this.cachedModel) {
-				const modeId = this.cachedModel.getModeId();
-				if (modeId !== PLAINTEXT_MODE_ID) { // do not suggest when the mode ID is simple plain text
-					return suggestFilename(modeId, this.getName());
+				const mode = this.cachedModel.getMode();
+				if (mode !== PLAINTEXT_MODE_ID) { // do not suggest when the mode ID is simple plain text
+					return suggestFilename(mode, this.getName());
 				}
 			}
 		}
@@ -113,73 +177,79 @@ export class UntitledEditorInput extends AbstractUntitledEditorInput {
 		return this.getName();
 	}
 
-	public getEncoding(): string {
+	getEncoding(): string {
 		if (this.cachedModel) {
 			return this.cachedModel.getEncoding();
 		}
 
-		return null;
+		return this.preferredEncoding;
 	}
 
-	public setEncoding(encoding: string, mode: EncodingMode /* ignored, we only have Encode */): void {
+	setEncoding(encoding: string, mode: EncodingMode /* ignored, we only have Encode */): void {
+		this.preferredEncoding = encoding;
+
 		if (this.cachedModel) {
 			this.cachedModel.setEncoding(encoding);
 		}
 	}
 
-	public resolve(refresh?: boolean): TPromise<UntitledEditorModel> {
+	setMode(mode: string): void {
+		this.preferredMode = mode;
 
-		// Use Cached Model
 		if (this.cachedModel) {
-			return TPromise.as(this.cachedModel);
+			this.cachedModel.setMode(mode);
+		}
+	}
+
+	getMode(): string | undefined {
+		if (this.cachedModel) {
+			return this.cachedModel.getMode();
+		}
+
+		return this.preferredMode;
+	}
+
+	resolve(): Promise<UntitledEditorModel & IResolvedTextEditorModel> {
+
+		// Join a model resolve if we have had one before
+		if (this.modelResolve) {
+			return this.modelResolve;
 		}
 
 		// Otherwise Create Model and load
-		const model = this.createModel();
-		return model.load().then((resolvedModel: UntitledEditorModel) => {
-			this.cachedModel = resolvedModel;
+		this.cachedModel = this.createModel();
+		this.modelResolve = this.cachedModel.load();
 
-			return this.cachedModel;
-		});
+		return this.modelResolve;
 	}
 
 	private createModel(): UntitledEditorModel {
-		const content = '';
-		const model = this.instantiationService.createInstance(UntitledEditorModel, content, this.modeId, this.resource, this.hasAssociatedFilePath);
+		const model = this._register(this.instantiationService.createInstance(UntitledEditorModel, this.preferredMode, this.resource, this.hasAssociatedFilePath, this.initialValue, this.preferredEncoding));
 
 		// re-emit some events from the model
-		this.toUnbind.push(model.onDidChangeDirty(() => this._onDidChangeDirty.fire()));
-		this.toUnbind.push(model.onDidChangeEncoding(() => this._onDidModelChangeEncoding.fire()));
+		this._register(model.onDidChangeContent(() => this._onDidModelChangeContent.fire()));
+		this._register(model.onDidChangeDirty(() => this._onDidChangeDirty.fire()));
+		this._register(model.onDidChangeEncoding(() => this._onDidModelChangeEncoding.fire()));
 
 		return model;
 	}
 
-	public matches(otherInput: any): boolean {
+	matches(otherInput: unknown): boolean {
 		if (super.matches(otherInput) === true) {
 			return true;
 		}
 
+		// Otherwise compare by properties
 		if (otherInput instanceof UntitledEditorInput) {
-			const otherUntitledEditorInput = <UntitledEditorInput>otherInput;
-
-			// Otherwise compare by properties
-			return otherUntitledEditorInput.resource.toString() === this.resource.toString();
+			return otherInput.resource.toString() === this.resource.toString();
 		}
 
 		return false;
 	}
 
-	public dispose(): void {
-		this._onDidModelChangeEncoding.dispose();
-
-		// Listeners
-		dispose(this.toUnbind);
-
-		// Model
-		if (this.cachedModel) {
-			this.cachedModel.dispose();
-			this.cachedModel = null;
-		}
+	dispose(): void {
+		this.cachedModel = null;
+		this.modelResolve = null;
 
 		super.dispose();
 	}

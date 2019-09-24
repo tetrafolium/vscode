@@ -2,63 +2,31 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
-import { IMode, IState, TokenizationRegistry } from 'vs/editor/common/modes';
-import { AbstractState, ITokenizationResult } from 'vs/editor/common/modes/abstractState';
-import { TokenizationSupport } from 'vs/editor/common/modes/supports/tokenizationSupport';
-import { LineStream } from 'vs/editor/common/modes/lineStream';
+import { Event } from 'vs/base/common/event';
+import { Disposable } from 'vs/base/common/lifecycle';
+import { IMode, LanguageIdentifier } from 'vs/editor/common/modes';
+import { ILanguageSelection } from 'vs/editor/common/services/modeService';
 
-let instanceCount = 0;
-function generateMockModeId(): string {
-	return 'mockMode' + (++instanceCount);
-}
+export class MockMode extends Disposable implements IMode {
+	private readonly _languageIdentifier: LanguageIdentifier;
 
-export class MockMode implements IMode {
-	private _id: string;
-
-	constructor(id?: string) {
-		if (typeof id === 'undefined') {
-			id = generateMockModeId();
-		}
-		this._id = id;
+	constructor(languageIdentifier: LanguageIdentifier) {
+		super();
+		this._languageIdentifier = languageIdentifier;
 	}
 
 	public getId(): string {
-		return this._id;
+		return this._languageIdentifier.language;
+	}
+
+	public getLanguageIdentifier(): LanguageIdentifier {
+		return this._languageIdentifier;
 	}
 }
 
-export class StateForMockTokenizingMode extends AbstractState {
-
-	private _tokenType: string;
-
-	constructor(modeId: string, tokenType: string) {
-		super(modeId);
-		this._tokenType = tokenType;
-	}
-
-	public makeClone(): StateForMockTokenizingMode {
-		return this;
-	}
-
-	public equals(other: IState): boolean {
-		return true;
-	}
-
-	public tokenize(stream: LineStream): ITokenizationResult {
-		stream.advanceToEOS();
-		return { type: this._tokenType };
-	}
-}
-
-export class MockTokenizingMode extends MockMode {
-
-	constructor(tokenType: string) {
-		super();
-
-		TokenizationRegistry.register(this.getId(), new TokenizationSupport(null, this.getId(), {
-			getInitialState: () => new StateForMockTokenizingMode(this.getId(), tokenType)
-		}, false));
-	}
+export class StaticLanguageSelector implements ILanguageSelection {
+	readonly onDidChange: Event<LanguageIdentifier> = Event.None;
+	constructor(public readonly languageIdentifier: LanguageIdentifier) { }
+	public dispose(): void { }
 }

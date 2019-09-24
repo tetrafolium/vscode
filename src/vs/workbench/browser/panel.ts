@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as DOM from 'vs/base/browser/dom';
-import { Registry } from 'vs/platform/platform';
-import { TPromise } from 'vs/base/common/winjs.base';
+import { Registry } from 'vs/platform/registry/common/platform';
 import { IPanel } from 'vs/workbench/common/panel';
 import { Composite, CompositeDescriptor, CompositeRegistry } from 'vs/workbench/browser/composite';
 import { Action } from 'vs/base/common/actions';
 import { IPanelService } from 'vs/workbench/services/panel/common/panelService';
-import { IPartService } from 'vs/workbench/services/part/common/partService';
+import { IWorkbenchLayoutService, Parts } from 'vs/workbench/services/layout/browser/layoutService';
+import { IConstructorSignature0 } from 'vs/platform/instantiation/common/instantiation';
+import { isAncestor } from 'vs/base/browser/dom';
 
 export abstract class Panel extends Composite implements IPanel { }
 
@@ -18,89 +18,101 @@ export abstract class Panel extends Composite implements IPanel { }
  * A panel descriptor is a leightweight descriptor of a panel in the workbench.
  */
 export class PanelDescriptor extends CompositeDescriptor<Panel> {
-	constructor(moduleId: string, ctorName: string, id: string, name: string, cssClass?: string, order?: number) {
-		super(moduleId, ctorName, id, name, cssClass, order);
+
+	constructor(ctor: IConstructorSignature0<Panel>, id: string, name: string, cssClass?: string, order?: number, _commandId?: string) {
+		super(ctor, id, name, cssClass, order, _commandId);
 	}
 }
 
 export class PanelRegistry extends CompositeRegistry<Panel> {
-	private defaultPanelId: string;
+	private defaultPanelId!: string;
 
 	/**
 	 * Registers a panel to the platform.
 	 */
-	public registerPanel(descriptor: PanelDescriptor): void {
+	registerPanel(descriptor: PanelDescriptor): void {
 		super.registerComposite(descriptor);
 	}
 
 	/**
-	 * Returns the panel descriptor for the given id or null if none.
+	 * Deregisters a panel to the platform.
 	 */
-	public getPanel(id: string): PanelDescriptor {
+	deregisterPanel(id: string): void {
+		super.deregisterComposite(id);
+	}
+
+	/**
+	 * Returns a panel by id.
+	 */
+	getPanel(id: string): PanelDescriptor | null {
 		return this.getComposite(id);
 	}
 
 	/**
 	 * Returns an array of registered panels known to the platform.
 	 */
-	public getPanels(): PanelDescriptor[] {
-		return this.getComposits();
+	getPanels(): PanelDescriptor[] {
+		return this.getComposites();
 	}
 
 	/**
 	 * Sets the id of the panel that should open on startup by default.
 	 */
-	public setDefaultPanelId(id: string): void {
+	setDefaultPanelId(id: string): void {
 		this.defaultPanelId = id;
 	}
 
 	/**
 	 * Gets the id of the panel that should open on startup by default.
 	 */
-	public getDefaultPanelId(): string {
+	getDefaultPanelId(): string {
 		return this.defaultPanelId;
+	}
+
+	/**
+	 * Find out if a panel exists with the provided ID.
+	 */
+	hasPanel(id: string): boolean {
+		return this.getPanels().some(panel => panel.id === id);
 	}
 }
 
 /**
- * A reusable action to toggle a panel with a specific id.
+ * A reusable action to toggle a panel with a specific id depending on focus.
  */
 export abstract class TogglePanelAction extends Action {
-
-	private panelId: string;
 
 	constructor(
 		id: string,
 		label: string,
-		panelId: string,
+		private readonly panelId: string,
 		protected panelService: IPanelService,
-		private partService: IPartService,
+		private layoutService: IWorkbenchLayoutService,
 		cssClass?: string
 	) {
 		super(id, label, cssClass);
-		this.panelId = panelId;
 	}
 
-	public run(): TPromise<any> {
-
-		if (this.isPanelShowing()) {
-			this.partService.setPanelHidden(true);
-			return TPromise.as(true);
+	run(): Promise<any> {
+		if (this.isPanelFocused()) {
+			this.layoutService.setPanelHidden(true);
+		} else {
+			this.panelService.openPanel(this.panelId, true);
 		}
 
-		return this.panelService.openPanel(this.panelId, true);
+		return Promise.resolve();
 	}
 
-	private isPanelShowing(): boolean {
-		let panel = this.panelService.getActivePanel();
-		return panel && panel.getId() === this.panelId;
+	private isPanelActive(): boolean {
+		const activePanel = this.panelService.getActivePanel();
+
+		return !!activePanel && activePanel.getId() === this.panelId;
 	}
 
-	protected isPanelFocussed(): boolean {
-		let activePanel = this.panelService.getActivePanel();
-		let activeElement = document.activeElement;
+	private isPanelFocused(): boolean {
+		const activeElement = document.activeElement;
 
-		return activePanel && activeElement && DOM.isAncestor(activeElement, (<Panel>activePanel).getContainer().getHTMLElement());
+		return !!(this.isPanelActive() && activeElement && isAncestor(activeElement, this.layoutService.getContainer(Parts.PANEL_PART)));
 	}
 }
 

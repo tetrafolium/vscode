@@ -3,132 +3,167 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 'use strict';
-var gulp = require('gulp');
-var tsb = require('gulp-tsb');
-var es = require('event-stream');
-var watch = require('./watch');
-var nls = require('./nls');
-var util = require('./util');
-var reporter_1 = require('./reporter');
-var path = require('path');
-var bom = require('gulp-bom');
-var sourcemaps = require('gulp-sourcemaps');
-var _ = require('underscore');
-var monacodts = require('../monaco/api');
-var fs = require('fs');
-var reporter = reporter_1.createReporter();
-var rootDir = path.join(__dirname, '../../src');
-var options = require('../../src/tsconfig.json').compilerOptions;
-options.verbose = false;
-options.sourceMap = true;
-options.rootDir = rootDir;
-options.sourceRoot = util.toFileUri(rootDir);
-function createCompile(build, emitError) {
-    var opts = _.clone(options);
-    opts.inlineSources = !!build;
-    opts.noFilesystemLookup = true;
-    var ts = tsb.create(opts, null, null, function (err) { return reporter(err.toString()); });
-    return function (token) {
-        var utf8Filter = util.filter(function (data) { return /(\/|\\)test(\/|\\).*utf8/.test(data.path); });
-        var tsFilter = util.filter(function (data) { return /\.ts$/.test(data.path); });
-        var noDeclarationsFilter = util.filter(function (data) { return !(/\.d\.ts$/.test(data.path)); });
-        var input = es.through();
-        var output = input
+Object.defineProperty(exports, "__esModule", { value: true });
+const es = require("event-stream");
+const fs = require("fs");
+const gulp = require("gulp");
+const bom = require("gulp-bom");
+const sourcemaps = require("gulp-sourcemaps");
+const tsb = require("gulp-tsb");
+const path = require("path");
+const monacodts = require("../monaco/api");
+const nls = require("./nls");
+const reporter_1 = require("./reporter");
+const util = require("./util");
+const fancyLog = require("fancy-log");
+const ansiColors = require("ansi-colors");
+const watch = require('./watch');
+const reporter = reporter_1.createReporter();
+function getTypeScriptCompilerOptions(src) {
+    const rootDir = path.join(__dirname, `../../${src}`);
+    let options = {};
+    options.verbose = false;
+    options.sourceMap = true;
+    if (process.env['VSCODE_NO_SOURCEMAP']) { // To be used by developers in a hurry
+        options.sourceMap = false;
+    }
+    options.rootDir = rootDir;
+    options.baseUrl = rootDir;
+    options.sourceRoot = util.toFileUri(rootDir);
+    options.newLine = /\r\n/.test(fs.readFileSync(__filename, 'utf8')) ? 0 : 1;
+    return options;
+}
+function createCompile(src, build, emitError) {
+    const projectPath = path.join(__dirname, '../../', src, 'tsconfig.json');
+    const overrideOptions = Object.assign(Object.assign({}, getTypeScriptCompilerOptions(src)), { inlineSources: Boolean(build) });
+    const compilation = tsb.create(projectPath, overrideOptions, false, err => reporter(err));
+    function pipeline(token) {
+        const utf8Filter = util.filter(data => /(\/|\\)test(\/|\\).*utf8/.test(data.path));
+        const tsFilter = util.filter(data => /\.ts$/.test(data.path));
+        const noDeclarationsFilter = util.filter(data => !(/\.d\.ts$/.test(data.path)));
+        const input = es.through();
+        const output = input
             .pipe(utf8Filter)
             .pipe(bom())
             .pipe(utf8Filter.restore)
             .pipe(tsFilter)
             .pipe(util.loadSourcemaps())
-            .pipe(ts(token))
+            .pipe(compilation(token))
             .pipe(noDeclarationsFilter)
             .pipe(build ? nls() : es.through())
             .pipe(noDeclarationsFilter.restore)
             .pipe(sourcemaps.write('.', {
             addComment: false,
             includeContent: !!build,
-            sourceRoot: options.sourceRoot
+            sourceRoot: overrideOptions.sourceRoot
         }))
             .pipe(tsFilter.restore)
-            .pipe(reporter.end(emitError));
+            .pipe(reporter.end(!!emitError));
         return es.duplex(input, output);
+    }
+    pipeline.tsProjectSrc = () => {
+        return compilation.src({ base: src });
     };
+    return pipeline;
 }
-function compileTask(out, build) {
-    var compile = createCompile(build, true);
+function compileTask(src, out, build) {
     return function () {
-        var src = es.merge(gulp.src('src/**', { base: 'src' }), gulp.src('node_modules/typescript/lib/lib.d.ts'));
-        return src
+        const compile = createCompile(src, build, true);
+        const srcPipe = gulp.src(`${src}/**`, { base: `${src}` });
+        let generator = new MonacoGenerator(false);
+        if (src === 'src') {
+            generator.execute();
+        }
+        return srcPipe
+            .pipe(generator.stream)
             .pipe(compile())
-            .pipe(gulp.dest(out))
-            .pipe(monacodtsTask(out, false));
+            .pipe(gulp.dest(out));
     };
 }
 exports.compileTask = compileTask;
 function watchTask(out, build) {
-    var compile = createCompile(build);
     return function () {
-        var src = es.merge(gulp.src('src/**', { base: 'src' }), gulp.src('node_modules/typescript/lib/lib.d.ts'));
-        var watchSrc = watch('src/**', { base: 'src' });
+        const compile = createCompile('src', build);
+        const src = gulp.src('src/**', { base: 'src' });
+        const watchSrc = watch('src/**', { base: 'src', readDelay: 200 });
+        let generator = new MonacoGenerator(true);
+        generator.execute();
         return watchSrc
+            .pipe(generator.stream)
             .pipe(util.incremental(compile, src, true))
-            .pipe(gulp.dest(out))
-            .pipe(monacodtsTask(out, true));
+            .pipe(gulp.dest(out));
     };
 }
 exports.watchTask = watchTask;
-function monacodtsTask(out, isWatch) {
-    var timer = null;
-    var runSoon = function (howSoon) {
-        if (timer !== null) {
-            clearTimeout(timer);
-            timer = null;
-        }
-        timer = setTimeout(function () {
-            timer = null;
-            runNow();
-        }, howSoon);
-    };
-    var runNow = function () {
-        if (timer !== null) {
-            clearTimeout(timer);
-            timer = null;
-        }
-        // if (reporter.hasErrors()) {
-        // 	monacodts.complainErrors();
-        // 	return;
-        // }
-        var result = monacodts.run(out);
-        if (!result.isTheSame) {
-            if (isWatch) {
-                fs.writeFileSync(result.filePath, result.content);
+const REPO_SRC_FOLDER = path.join(__dirname, '../../src');
+class MonacoGenerator {
+    constructor(isWatch) {
+        this._executeSoonTimer = null;
+        this._isWatch = isWatch;
+        this.stream = es.through();
+        this._watchedFiles = {};
+        let onWillReadFile = (moduleId, filePath) => {
+            if (!this._isWatch) {
+                return;
             }
-            else {
-                resultStream.emit('error', 'monaco.d.ts is no longer up to date. Please run gulp watch and commit the new file.');
+            if (this._watchedFiles[filePath]) {
+                return;
             }
+            this._watchedFiles[filePath] = true;
+            fs.watchFile(filePath, () => {
+                this._declarationResolver.invalidateCache(moduleId);
+                this._executeSoon();
+            });
+        };
+        this._fsProvider = new class extends monacodts.FSProvider {
+            readFileSync(moduleId, filePath) {
+                onWillReadFile(moduleId, filePath);
+                return super.readFileSync(moduleId, filePath);
+            }
+        };
+        this._declarationResolver = new monacodts.DeclarationResolver(this._fsProvider);
+        if (this._isWatch) {
+            fs.watchFile(monacodts.RECIPE_PATH, () => {
+                this._executeSoon();
+            });
         }
-    };
-    var resultStream;
-    if (isWatch) {
-        var filesToWatchMap_1 = {};
-        monacodts.getFilesToWatch(out).forEach(function (filePath) {
-            filesToWatchMap_1[path.normalize(filePath)] = true;
-        });
-        watch('build/monaco/*').pipe(es.through(function () {
-            runSoon(5000);
-        }));
-        resultStream = es.through(function (data) {
-            var filePath = path.normalize(data.path);
-            if (filesToWatchMap_1[filePath]) {
-                runSoon(5000);
-            }
-            this.emit('data', data);
-        });
     }
-    else {
-        resultStream = es.through(null, function () {
-            runNow();
-            this.emit('end');
-        });
+    _executeSoon() {
+        if (this._executeSoonTimer !== null) {
+            clearTimeout(this._executeSoonTimer);
+            this._executeSoonTimer = null;
+        }
+        this._executeSoonTimer = setTimeout(() => {
+            this._executeSoonTimer = null;
+            this.execute();
+        }, 20);
     }
-    return resultStream;
+    _run() {
+        let r = monacodts.run3(this._declarationResolver);
+        if (!r && !this._isWatch) {
+            // The build must always be able to generate the monaco.d.ts
+            throw new Error(`monaco.d.ts generation error - Cannot continue`);
+        }
+        return r;
+    }
+    _log(message, ...rest) {
+        fancyLog(ansiColors.cyan('[monaco.d.ts]'), message, ...rest);
+    }
+    execute() {
+        const startTime = Date.now();
+        const result = this._run();
+        if (!result) {
+            // nothing really changed
+            return;
+        }
+        if (result.isTheSame) {
+            return;
+        }
+        fs.writeFileSync(result.filePath, result.content);
+        fs.writeFileSync(path.join(REPO_SRC_FOLDER, 'vs/editor/common/standalone/standaloneEnums.ts'), result.enums);
+        this._log(`monaco.d.ts is changed - total time took ${Date.now() - startTime} ms`);
+        if (!this._isWatch) {
+            this.stream.emit('error', 'monaco.d.ts is no longer up to date. Please run gulp watch and commit the new file.');
+        }
+    }
 }

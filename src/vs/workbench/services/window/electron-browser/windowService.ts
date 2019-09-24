@@ -3,85 +3,128 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
+import { Event } from 'vs/base/common/event';
+import { IWindowService, IWindowsService, IEnterWorkspaceResult, IOpenSettings, IURIToOpen, isFolderToOpen, isWorkspaceToOpen } from 'vs/platform/windows/common/windows';
+import { IRecentlyOpened, IRecent } from 'vs/platform/history/common/history';
+import { ISerializableCommandAction } from 'vs/platform/actions/common/actions';
+import { URI } from 'vs/base/common/uri';
+import { Disposable } from 'vs/base/common/lifecycle';
+import { ILabelService } from 'vs/platform/label/common/label';
+import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
+import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 
-import { ElectronWindow } from 'vs/workbench/electron-browser/window';
-import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
-import Event, { Emitter } from 'vs/base/common/event';
+export class WindowService extends Disposable implements IWindowService {
 
-import { ipcRenderer as ipc, remote } from 'electron';
+	readonly onDidChangeFocus: Event<boolean>;
+	readonly onDidChangeMaximize: Event<boolean>;
 
-const windowId = remote.getCurrentWindow().id;
+	_serviceBrand: undefined;
 
-export const IWindowIPCService = createDecorator<IWindowIPCService>('windowIPCService');
+	private _windowId: number;
+	private remoteAuthority: string | undefined;
 
-export interface IWindowServices {
-	windowService?: IWindowIPCService;
+	private _hasFocus: boolean;
+	get hasFocus(): boolean { return this._hasFocus; }
+
+	constructor(
+		@IWorkbenchEnvironmentService environmentService: IWorkbenchEnvironmentService,
+		@IWindowsService private readonly windowsService: IWindowsService,
+		@ILabelService private readonly labelService: ILabelService
+	) {
+		super();
+
+		this._windowId = environmentService.configuration.windowId;
+		this.remoteAuthority = environmentService.configuration.remoteAuthority;
+
+		const onThisWindowFocus = Event.map(Event.filter(windowsService.onWindowFocus, id => id === this._windowId), _ => true);
+		const onThisWindowBlur = Event.map(Event.filter(windowsService.onWindowBlur, id => id === this._windowId), _ => false);
+		const onThisWindowMaximize = Event.map(Event.filter(windowsService.onWindowMaximize, id => id === this._windowId), _ => true);
+		const onThisWindowUnmaximize = Event.map(Event.filter(windowsService.onWindowUnmaximize, id => id === this._windowId), _ => false);
+		this.onDidChangeFocus = Event.any(onThisWindowFocus, onThisWindowBlur);
+		this.onDidChangeMaximize = Event.any(onThisWindowMaximize, onThisWindowUnmaximize);
+
+		this._hasFocus = document.hasFocus();
+		this.isFocused().then(focused => this._hasFocus = focused);
+		this._register(this.onDidChangeFocus(focus => this._hasFocus = focus));
+	}
+
+	get windowId(): number {
+		return this._windowId;
+	}
+
+	closeWorkspace(): Promise<void> {
+		return this.windowsService.closeWorkspace(this.windowId);
+	}
+
+	enterWorkspace(path: URI): Promise<IEnterWorkspaceResult | undefined> {
+		return this.windowsService.enterWorkspace(this.windowId, path);
+	}
+
+	openWindow(uris: IURIToOpen[], options: IOpenSettings = {}): Promise<void> {
+		if (!!this.remoteAuthority) {
+			uris.forEach(u => u.label = u.label || this.getRecentLabel(u));
+		}
+
+		return this.windowsService.openWindow(this.windowId, uris, options);
+	}
+
+	closeWindow(): Promise<void> {
+		return this.windowsService.closeWindow(this.windowId);
+	}
+
+	getRecentlyOpened(): Promise<IRecentlyOpened> {
+		return this.windowsService.getRecentlyOpened(this.windowId);
+	}
+
+	addRecentlyOpened(recents: IRecent[]): Promise<void> {
+		return this.windowsService.addRecentlyOpened(recents);
+	}
+
+	removeFromRecentlyOpened(paths: URI[]): Promise<void> {
+		return this.windowsService.removeFromRecentlyOpened(paths);
+	}
+
+	focusWindow(): Promise<void> {
+		return this.windowsService.focusWindow(this.windowId);
+	}
+
+	isFocused(): Promise<boolean> {
+		return this.windowsService.isFocused(this.windowId);
+	}
+
+	isMaximized(): Promise<boolean> {
+		return this.windowsService.isMaximized(this.windowId);
+	}
+
+	maximizeWindow(): Promise<void> {
+		return this.windowsService.maximizeWindow(this.windowId);
+	}
+
+	unmaximizeWindow(): Promise<void> {
+		return this.windowsService.unmaximizeWindow(this.windowId);
+	}
+
+	minimizeWindow(): Promise<void> {
+		return this.windowsService.minimizeWindow(this.windowId);
+	}
+
+	onWindowTitleDoubleClick(): Promise<void> {
+		return this.windowsService.onWindowTitleDoubleClick(this.windowId);
+	}
+
+	updateTouchBar(items: ISerializableCommandAction[][]): Promise<void> {
+		return this.windowsService.updateTouchBar(this.windowId, items);
+	}
+
+	private getRecentLabel(u: IURIToOpen): string {
+		if (isFolderToOpen(u)) {
+			return this.labelService.getWorkspaceLabel(u.folderUri, { verbose: true });
+		} else if (isWorkspaceToOpen(u)) {
+			return this.labelService.getWorkspaceLabel({ id: '', configPath: u.workspaceUri }, { verbose: true });
+		} else {
+			return this.labelService.getUriLabel(u.fileUri);
+		}
+	}
 }
 
-export interface IBroadcast {
-	channel: string;
-	payload: any;
-}
-
-export interface IWindowIPCService {
-	_serviceBrand: any;
-
-	getWindowId(): number;
-
-	getWindow(): ElectronWindow;
-
-	registerWindow(win: ElectronWindow): void;
-
-	broadcast(b: IBroadcast, target?: string): void;
-
-	onBroadcast: Event<IBroadcast>;
-}
-
-/**
- * TODO@Joao: remove this service
- * @deprecated
- */
-export class WindowIPCService implements IWindowIPCService {
-	public _serviceBrand: any;
-
-	private win: ElectronWindow;
-	private windowId: number;
-	private _onBroadcast: Emitter<IBroadcast>;
-
-	constructor() {
-		this._onBroadcast = new Emitter<IBroadcast>();
-		this.windowId = windowId;
-
-		this.registerListeners();
-	}
-
-	private registerListeners(): void {
-		ipc.on('vscode:broadcast', (event, b: IBroadcast) => {
-			this._onBroadcast.fire(b);
-		});
-	}
-
-	public get onBroadcast(): Event<IBroadcast> {
-		return this._onBroadcast.event;
-	}
-
-	public getWindowId(): number {
-		return this.windowId;
-	}
-
-	public getWindow(): ElectronWindow {
-		return this.win;
-	}
-
-	public registerWindow(win: ElectronWindow): void {
-		this.win = win;
-	}
-
-	public broadcast(b: IBroadcast, target?: string): void {
-		ipc.send('vscode:broadcast', this.getWindowId(), target, {
-			channel: b.channel,
-			payload: b.payload
-		});
-	}
-}
+registerSingleton(IWindowService, WindowService);

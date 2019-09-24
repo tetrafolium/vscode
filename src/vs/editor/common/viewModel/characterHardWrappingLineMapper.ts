@@ -2,14 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
+import { CharCode } from 'vs/base/common/charCode';
 import * as strings from 'vs/base/common/strings';
-import { WrappingIndent } from 'vs/editor/common/editorCommon';
+import { WrappingIndent } from 'vs/editor/common/config/editorOptions';
+import { CharacterClassifier } from 'vs/editor/common/core/characterClassifier';
+import { toUint32Array } from 'vs/editor/common/core/uint';
 import { PrefixSumComputer } from 'vs/editor/common/viewModel/prefixSumComputer';
 import { ILineMapperFactory, ILineMapping, OutputPosition } from 'vs/editor/common/viewModel/splitLinesCollection';
-import { CharCode } from 'vs/base/common/charCode';
-import { CharacterClassifier } from 'vs/editor/common/core/characterClassifier';
 
 const enum CharacterClass {
 	NONE = 0,
@@ -56,7 +56,7 @@ class WrappingCharacterClassifier extends CharacterClassifier<CharacterClass> {
 
 export class CharacterHardWrappingLineMapperFactory implements ILineMapperFactory {
 
-	private classifier: WrappingCharacterClassifier;
+	private readonly classifier: WrappingCharacterClassifier;
 
 	constructor(breakBeforeChars: string, breakAfterChars: string, breakObtrusiveChars: string) {
 		this.classifier = new WrappingCharacterClassifier(breakBeforeChars, breakAfterChars, breakObtrusiveChars);
@@ -74,7 +74,7 @@ export class CharacterHardWrappingLineMapperFactory implements ILineMapperFactor
 		return currentVisibleColumn + columnSize;
 	}
 
-	public createLineMapping(lineText: string, tabSize: number, breakingColumn: number, columnsForFullWidthChar: number, hardWrappingIndent: WrappingIndent): ILineMapping {
+	public createLineMapping(lineText: string, tabSize: number, breakingColumn: number, columnsForFullWidthChar: number, hardWrappingIndent: WrappingIndent): ILineMapping | null {
 		if (breakingColumn === -1) {
 			return null;
 		}
@@ -91,16 +91,26 @@ export class CharacterHardWrappingLineMapperFactory implements ILineMapperFactor
 		if (hardWrappingIndent !== WrappingIndent.None) {
 			firstNonWhitespaceIndex = strings.firstNonWhitespaceIndex(lineText);
 			if (firstNonWhitespaceIndex !== -1) {
+				// Track existing indent
 				wrappedTextIndent = lineText.substring(0, firstNonWhitespaceIndex);
 				for (let i = 0; i < firstNonWhitespaceIndex; i++) {
 					wrappedTextIndentVisibleColumn = CharacterHardWrappingLineMapperFactory.nextVisibleColumn(wrappedTextIndentVisibleColumn, tabSize, lineText.charCodeAt(i) === CharCode.Tab, 1);
 				}
+
+				// Increase indent of continuation lines, if desired
+				let numberOfAdditionalTabs = 0;
 				if (hardWrappingIndent === WrappingIndent.Indent) {
+					numberOfAdditionalTabs = 1;
+				} else if (hardWrappingIndent === WrappingIndent.DeepIndent) {
+					numberOfAdditionalTabs = 2;
+				}
+				for (let i = 0; i < numberOfAdditionalTabs; i++) {
 					wrappedTextIndent += '\t';
 					wrappedTextIndentVisibleColumn = CharacterHardWrappingLineMapperFactory.nextVisibleColumn(wrappedTextIndentVisibleColumn, tabSize, true, 1);
 				}
-				// Force sticking to beginning of line if indentColumn > 66% breakingColumn
-				if (wrappedTextIndentVisibleColumn > 1 / 2 * breakingColumn) {
+
+				// Force sticking to beginning of line if no character would fit except for the indentation
+				if (wrappedTextIndentVisibleColumn + columnsForFullWidthChar > breakingColumn) {
 					wrappedTextIndent = '';
 					wrappedTextIndentVisibleColumn = 0;
 				}
@@ -125,6 +135,13 @@ export class CharacterHardWrappingLineMapperFactory implements ILineMapperFactor
 			let charCode = lineText.charCodeAt(i);
 			let charCodeIsTab = (charCode === CharCode.Tab);
 			let charCodeClass = classifier.get(charCode);
+
+			if (strings.isLowSurrogate(charCode)/*  && i + 1 < len */) {
+				// A surrogate pair must always be considered as a single unit, so it is never to be broken
+				// => advance visibleColumn by 1 and advance to next char code...
+				visibleColumn = visibleColumn + 1;
+				continue;
+			}
 
 			if (charCodeClass === CharacterClass.BREAK_BEFORE) {
 				// This is a character that indicates that a break should happen before it
@@ -161,13 +178,13 @@ export class CharacterHardWrappingLineMapperFactory implements ILineMapperFactor
 				let breakBeforeOffset: number;
 				let restoreVisibleColumnFrom: number;
 
-				if (niceBreakOffset !== -1) {
+				if (niceBreakOffset !== -1 && niceBreakVisibleColumn <= breakingColumn) {
 
 					// We will break before `niceBreakLastOffset`
 					breakBeforeOffset = niceBreakOffset;
 					restoreVisibleColumnFrom = niceBreakVisibleColumn;
 
-				} else if (obtrusiveBreakOffset !== -1) {
+				} else if (obtrusiveBreakOffset !== -1 && obtrusiveBreakVisibleColumn <= breakingColumn) {
 
 					// We will break before `obtrusiveBreakLastOffset`
 					breakBeforeOffset = obtrusiveBreakOffset;
@@ -236,14 +253,17 @@ export class CharacterHardWrappingLineMapperFactory implements ILineMapperFactor
 		// Add last segment
 		breakingLengths[breakingLengthsIndex++] = len - lastBreakingOffset;
 
-		return new CharacterHardWrappingLineMapping(new PrefixSumComputer(breakingLengths), wrappedTextIndent);
+		return new CharacterHardWrappingLineMapping(
+			new PrefixSumComputer(toUint32Array(breakingLengths)),
+			wrappedTextIndent
+		);
 	}
 }
 
 export class CharacterHardWrappingLineMapping implements ILineMapping {
 
-	private _prefixSums: PrefixSumComputer;
-	private _wrappedLinesIndent: string;
+	private readonly _prefixSums: PrefixSumComputer;
+	private readonly _wrappedLinesIndent: string;
 
 	constructor(prefixSums: PrefixSumComputer, wrappedLinesIndent: string) {
 		this._prefixSums = prefixSums;

@@ -2,48 +2,52 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import * as nls from 'vs/nls';
-import Event, { Emitter } from 'vs/base/common/event';
-import { Registry } from 'vs/platform/platform';
-import { ILanguageExtensionPoint } from 'vs/editor/common/services/modeService';
+import { Emitter, Event } from 'vs/base/common/event';
+import { LanguageId, LanguageIdentifier } from 'vs/editor/common/modes';
 import { LanguageConfigurationRegistry } from 'vs/editor/common/modes/languageConfigurationRegistry';
+import { ILanguageExtensionPoint } from 'vs/editor/common/services/modeService';
+import { Registry } from 'vs/platform/registry/common/platform';
+
 // Define extension point ids
-export var Extensions = {
+export const Extensions = {
 	ModesRegistry: 'editor.modesRegistry'
 };
 
 export class EditorModesRegistry {
 
-	private _languages: ILanguageExtensionPoint[];
+	private readonly _languages: ILanguageExtensionPoint[];
+	private _dynamicLanguages: ILanguageExtensionPoint[];
 
-	private _onDidAddLanguages: Emitter<ILanguageExtensionPoint[]> = new Emitter<ILanguageExtensionPoint[]>();
-	public onDidAddLanguages: Event<ILanguageExtensionPoint[]> = this._onDidAddLanguages.event;
+	private readonly _onDidChangeLanguages = new Emitter<void>();
+	public readonly onDidChangeLanguages: Event<void> = this._onDidChangeLanguages.event;
 
 	constructor() {
 		this._languages = [];
+		this._dynamicLanguages = [];
 	}
 
 	// --- languages
 
 	public registerLanguage(def: ILanguageExtensionPoint): void {
 		this._languages.push(def);
-		this._onDidAddLanguages.fire([def]);
+		this._onDidChangeLanguages.fire(undefined);
 	}
-	public registerLanguages(def: ILanguageExtensionPoint[]): void {
-		this._languages = this._languages.concat(def);
-		this._onDidAddLanguages.fire(def);
+	public setDynamicLanguages(def: ILanguageExtensionPoint[]): void {
+		this._dynamicLanguages = def;
+		this._onDidChangeLanguages.fire(undefined);
 	}
 	public getLanguages(): ILanguageExtensionPoint[] {
-		return this._languages.slice(0);
+		return (<ILanguageExtensionPoint[]>[]).concat(this._languages).concat(this._dynamicLanguages);
 	}
 }
 
-export var ModesRegistry = new EditorModesRegistry();
+export const ModesRegistry = new EditorModesRegistry();
 Registry.add(Extensions.ModesRegistry, ModesRegistry);
 
 export const PLAINTEXT_MODE_ID = 'plaintext';
+export const PLAINTEXT_LANGUAGE_IDENTIFIER = new LanguageIdentifier(PLAINTEXT_MODE_ID, LanguageId.PlainText);
 
 ModesRegistry.registerLanguage({
 	id: PLAINTEXT_MODE_ID,
@@ -51,7 +55,7 @@ ModesRegistry.registerLanguage({
 	aliases: [nls.localize('plainText.alias', "Plain Text"), 'text'],
 	mimetypes: ['text/plain']
 });
-LanguageConfigurationRegistry.register(PLAINTEXT_MODE_ID, {
+LanguageConfigurationRegistry.register(PLAINTEXT_LANGUAGE_IDENTIFIER, {
 	brackets: [
 		['(', ')'],
 		['[', ']'],

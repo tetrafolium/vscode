@@ -2,15 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
-
 import * as assert from 'assert';
-import { WrappingIndent } from 'vs/editor/common/editorCommon';
+import { WrappingIndent } from 'vs/editor/common/config/editorOptions';
 import { CharacterHardWrappingLineMapperFactory } from 'vs/editor/common/viewModel/characterHardWrappingLineMapper';
-import { ILineMapperFactory, ILineMapping, OutputPosition } from 'vs/editor/common/viewModel/splitLinesCollection';
+import { ILineMapperFactory, ILineMapping } from 'vs/editor/common/viewModel/splitLinesCollection';
 
-function assertLineMapping(factory: ILineMapperFactory, tabSize: number, breakAfter: number, annotatedText: string, wrappingIndent = WrappingIndent.None) {
-
+function assertLineMapping(factory: ILineMapperFactory, tabSize: number, breakAfter: number, annotatedText: string, wrappingIndent = WrappingIndent.None): ILineMapping | null {
+	// Create version of `annotatedText` with line break markers removed
 	let rawText = '';
 	let currentLineIndex = 0;
 	let lineIndices: number[] = [];
@@ -23,8 +21,9 @@ function assertLineMapping(factory: ILineMapperFactory, tabSize: number, breakAf
 		}
 	}
 
-	let mapper = factory.createLineMapping(rawText, tabSize, breakAfter, 2, wrappingIndent);
+	const mapper = factory.createLineMapping(rawText, tabSize, breakAfter, 2, wrappingIndent);
 
+	// Insert line break markers again, according to algorithm
 	let actualAnnotatedText = '';
 	if (mapper) {
 		let previousLineIndex = 0;
@@ -42,10 +41,12 @@ function assertLineMapping(factory: ILineMapperFactory, tabSize: number, breakAf
 	}
 
 	assert.equal(actualAnnotatedText, annotatedText);
+
+	return mapper;
 }
 
-suite('CharacterHardWrappingLineMapper', () => {
-	test('latin text', () => {
+suite('Editor ViewModel - CharacterHardWrappingLineMapper', () => {
+	test('CharacterHardWrappingLineMapper', () => {
 
 		let factory = new CharacterHardWrappingLineMapperFactory('(', ')', '.');
 
@@ -87,7 +88,7 @@ suite('CharacterHardWrappingLineMapper', () => {
 		assertLineMapping(factory, 4, 5, 'aa.|(.)|.aaa');
 	});
 
-	test('CJK and Kinsoku Shori', () => {
+	test('CharacterHardWrappingLineMapper - CJK and Kinsoku Shori', () => {
 		let factory = new CharacterHardWrappingLineMapperFactory('(', ')', '.');
 		assertLineMapping(factory, 4, 5, 'aa \u5b89|\u5b89');
 		assertLineMapping(factory, 4, 5, '\u3042 \u5b89|\u5b89');
@@ -97,13 +98,30 @@ suite('CharacterHardWrappingLineMapper', () => {
 		assertLineMapping(factory, 4, 5, 'aa |(\u5b89aa|\u5b89');
 	});
 
-	test('WrappingIndent.Same', () => {
+	test('CharacterHardWrappingLineMapper - WrappingIndent.Same', () => {
 		let factory = new CharacterHardWrappingLineMapperFactory('', ' ', '');
 		assertLineMapping(factory, 4, 38, ' *123456789012345678901234567890123456|7890', WrappingIndent.Same);
 	});
 
-	test('CJK and WrappingIndent.Same', () => {
+	test('issue #16332: Scroll bar overlaying on top of text', () => {
 		let factory = new CharacterHardWrappingLineMapperFactory('', ' ', '');
-		assertLineMapping(factory, 4, 30, '            协和飞机共生产了20|架，其中仅有16架投|入营运。巨大的资金', WrappingIndent.Same);
+		assertLineMapping(factory, 4, 24, 'a/ very/long/line/of/tex|t/that/expands/beyon|d/your/typical/line/|of/code/', WrappingIndent.Indent);
+	});
+
+	test('issue #35162: wrappingIndent not consistently working', () => {
+		let factory = new CharacterHardWrappingLineMapperFactory('', ' ', '');
+		let mapper = assertLineMapping(factory, 4, 24, '                t h i s |i s |a l |o n |g l |i n |e', WrappingIndent.Indent);
+		assert.equal(mapper!.getWrappedLinesIndent(), '                \t');
+	});
+
+	test('issue #75494: surrogate pairs', () => {
+		let factory = new CharacterHardWrappingLineMapperFactory('', ' ', '');
+		assertLineMapping(factory, 4, 49, '🐇👬🌖🌞🏇🍼🐇👬🌖🌞🏇🍼🐇👬🌖🌞🏇🍼🐇👬🌖🌞🏇🍼🐇|👬🌖🌞🏇🍼🐇👬🌖🌞🏇🍼🐇👬🌖🌞🏇🍼🐇👬🌖🌞🏇🍼🐇👬', WrappingIndent.Same);
+	});
+
+	test('CharacterHardWrappingLineMapper - WrappingIndent.DeepIndent', () => {
+		let factory = new CharacterHardWrappingLineMapperFactory('', ' ', '');
+		let mapper = assertLineMapping(factory, 4, 26, '        W e A r e T e s t |i n g D e |e p I n d |e n t a t |i o n', WrappingIndent.DeepIndent);
+		assert.equal(mapper!.getWrappedLinesIndent(), '        \t\t');
 	});
 });
