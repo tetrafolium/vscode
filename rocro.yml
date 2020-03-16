@@ -1,8 +1,12 @@
 inspecode:
 
   clang-format:
+    options:  # experimental settings
+      -style:
+        BasedOnStyle: LLVM    # (LLVM, Google, Chromium, Mozilla, WebKit)
+        IndentWidth: 4
     auto-fix: true
-    thresholds: { num-issues: 999 } # 2209
+    thresholds: { num-issues: 999 } # 2209 issues, when no options
 
   cpd:
     thresholds: { num-issues: 999 } # console を表示できない
@@ -25,11 +29,11 @@ inspecode:
 
   jshint:
   - input:  [ "src/" ]
-    thresholds: { num-issues: 988 }
-  - input:  [ "build/*/" ]
-    thresholds: { num-issues: 680 }
-  - ignore: [ "build/*/", "src/" ]
-    thresholds: { num-issues: 868 }
+    thresholds: { num-issues: 984 }
+  - input:  [ "build/[a-fh-z]*" ]
+    thresholds: { num-issues: 724 }
+  - ignore: [ "build/[a-fh-z]*", "src/" ]
+    thresholds: { num-issues: 826 }
 
   misspell:
     auto-fix: true
@@ -59,31 +63,23 @@ inspecode:
   #  + the console log exceeds the maximum size
   ###---------------------------------------------------------------------------
   phpcs:
-  - options:  # experimental settings
+    options:  # experimental settings
       --standard: PEAR
       --exclude:
+      - Generic.Commenting.DocComment
       - Generic.WhiteSpace.DisallowTabIndent
       - PEAR.WhiteSpace.ScopeIndent
       - PEAR.Functions.FunctionDeclaration
       - PEAR.Functions.FunctionCallSignature
-      #- PEAR.ControlStructures.MultiLineCondition
     #auto-fix: true
-    thresholds: { num-issues: 999 }
-  - options:  # experimental settings
-      --standard: PSR2
-      --exclude:
-      - Generic.WhiteSpace.DisallowTabIndent
-      - Generic.WhiteSpace.ScopeIndent
-      - PSR2.Methods.FunctionCallSignature
-      - Squiz.Functions.MultiLineFunctionDeclaration
-    #auto-fix: true
-    thresholds: { num-issues: 999 }
+    thresholds: { num-issues: 122 }
 
   ###---------------------------------------------------------------------------
   # Failed / PMD finished with errors.
   #  + Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
   ###---------------------------------------------------------------------------
   pmd:
+    machine: { cpu: 1.5 }
     thresholds: { num-issues: 999 }
 
   prettier:
