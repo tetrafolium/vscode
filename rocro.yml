@@ -1,0 +1,55 @@
+inspecode:
+
+  clang-format:
+    auto-fix: true
+    thresholds: { num-issues: 999 }
+
+  cpd:
+    thresholds: { num-issues: 999 }
+
+  eslint:
+    auto-fix: true
+    thresholds: { num-issues: 999 }
+
+  flow:
+    thresholds: { num-issues: 999 }
+
+  fossology:
+    thresholds: { num-issues: 999 }
+
+  grep:
+    thresholds: { num-issues: 999 }
+
+  jscpd:
+    thresholds: { num-issues: 999 }
+
+  jshint:
+    thresholds: { num-issues: 999 }
+
+  misspell:
+    auto-fix: true
+    thresholds: { num-issues: 999 }
+
+  npm-audit:
+    thresholds: { num-issues: 999 }
+
+  npm-test:
+    thresholds: { num-issues: 999 }
+
+  phpcs:
+    auto-fix: true
+    thresholds: { num-issues: 999 }
+
+  pmd:
+    thresholds: { num-issues: 999 }
+
+  prettier:
+    auto-fix: true
+    thresholds: { num-issues: 999 }
+
+  tslint:
+    auto-fix: true
+    thresholds: { num-issues: 999 }
+
+  unused:
+    thresholds: { num-issues: 999 }
