@@ -1,96 +1,19 @@
 inspecode:
 
   clang-format:
-    options:  # experimental settings
-      -style: '{BasedOnStyle: LLVM, IndentWidth: 4}'
-    auto-fix: true
-    thresholds: { num-issues: 999 } # 2209 issues, when no options
-
-  cpd:
-    thresholds: { num-issues: 999 } # console を表示できない
-
-  eslint:
-    auto-fix: true
-    thresholds: { num-issues: 214 }
-
-  flow:
-    thresholds: { num-issues: 0 }
-
-  fossology:
-    thresholds: { num-issues: 55 }
-
-  grep:
-    thresholds: { num-issues: 90 }
-
-  jscpd:
-    thresholds: { num-issues: 11 }
-
-  jshint:
-  - input:  [ "src/" ]
-    thresholds: { num-issues: 984 }
-  - input:  [ "build/[a-fh-z]*" ]
-    thresholds: { num-issues: 724 }
-  - ignore: [ "build/[a-fh-z]*", "src/" ]
-    thresholds: { num-issues: 826 }
-
-  misspell:
-    auto-fix: true
-    thresholds: { num-issues: 178 }
-
-  ###---------------------------------------------------------------------------
-  # Failed / npm audit finished with errors.
-  #  + npm ERR! code EAUDITNOLOCK
-  #  + npm ERR! audit Neither npm-shrinkwrap.json nor package-lock.json found: Cannot audit a project without a lockfile
-  #  + npm ERR! audit Try creating one first with: npm i --package-lock-only
-  #  + npm ERR! A complete log of this run can be found in:
-  #  + npm ERR!     /home/rocro/.npm/_logs/2020-03-16T06_05_57_676Z-debug.log
-  ###---------------------------------------------------------------------------
-  npm-audit:
-    thresholds: { num-issues: 999 }
-
-  ###---------------------------------------------------------------------------
-  # Succeeded / npm test finished successfully.
-  #  + Error: Cannot find module '../out/vs/loader'
-  #  + npm ERR! Test failed.  See above for more details.
-  ###---------------------------------------------------------------------------
-  npm-test:
-    thresholds: { num-issues: 2 }
-
-  ###---------------------------------------------------------------------------
-  # Failed /
-  #  + the console log exceeds the maximum size
-  ###---------------------------------------------------------------------------
-  phpcs:
-    options:  # experimental settings
-      --standard: PEAR
-      --exclude:
-      - Generic.Commenting.DocComment
-      - Generic.WhiteSpace.DisallowTabIndent
-      - PEAR.WhiteSpace.ScopeIndent
-      - PEAR.Functions.FunctionDeclaration
-      - PEAR.Functions.FunctionCallSignature
+  - ignore: [ src/ ]
+    #options:  # experimental settings
+    #  -style: '{BasedOnStyle: LLVM, IndentWidth: 4}'
     #auto-fix: true
-    thresholds: { num-issues: 122 }
-
-  ###---------------------------------------------------------------------------
-  # Failed / PMD finished with errors.
-  #  + Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
-  ###---------------------------------------------------------------------------
-  pmd:
-    machine: { cpu: 750m }
-      # must be <= 750m, on strophoid.io
-      # must be <= 1,    on tractrix.io
-    thresholds: { num-issues: 999 }
-
-  prettier:
-    auto-fix: true
-    thresholds: { num-issues: 999 }
-      # too many issues detected: 2423 > 1000
-
-  tslint:
-    auto-fix: true
-    thresholds: { num-issues: 999 }
-      # too many issues detected: 1142 > 1000
-
-  unused:
-    thresholds: { num-issues: 9 }
+    thresholds: { num-issues: 999 } # 2209 issues, when no options
+  - input:  [ src/ ]
+    ignore: [ src/vs/workbench/ ]
+    #options:  # experimental settings
+    #  -style: '{BasedOnStyle: LLVM, IndentWidth: 4}'
+    #auto-fix: true
+    thresholds: { num-issues: 999 } # 2209 issues, when no options
+  - input:  [ src/vs/workbench/ ]
+    #options:  # experimental settings
+    #  -style: '{BasedOnStyle: LLVM, IndentWidth: 4}'
+    #auto-fix: true
+    thresholds: { num-issues: 999 } # 2209 issues, when no options
