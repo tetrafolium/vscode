@@ -2,9 +2,7 @@ inspecode:
 
   clang-format:
     options:  # experimental settings
-      -style:
-        BasedOnStyle: LLVM    # (LLVM, Google, Chromium, Mozilla, WebKit)
-        IndentWidth: 4
+      -style: '{BasedOnStyle: LLVM, IndentWidth: 4}'
     auto-fix: true
     thresholds: { num-issues: 999 } # 2209 issues, when no options
 
