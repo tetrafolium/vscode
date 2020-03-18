@@ -13,7 +13,10 @@ inspecode:
     thresholds: { num-issues: 780 }
 
   cpd:
-    thresholds: { num-issues: 999 } # console を表示できない
+    ignore:
+    - src/vs/workbench/services/search/test/node/fixtures/examples/employee.js
+        # [temporary] avoid problem (tractrix/codelift#1777)
+    thresholds: { num-issues: 999 }
 
   eslint:
     auto-fix: true
