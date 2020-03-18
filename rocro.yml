@@ -1,16 +1,20 @@
 inspecode:
 
-  clang-format:
-  - ignore: [ src/ ]
-    auto-fix: true
-    thresholds: { num-issues: 499 }
-  - input:  [ src/ ]
-    ignore: [ src/vs/workbench/ ]
-    auto-fix: true
-    thresholds: { num-issues: 930 }
-  - input:  [ src/vs/workbench/ ]
-    auto-fix: true
-    thresholds: { num-issues: 780 }
+  ##----------------------------------------------------------------------------
+  ## (codelift#1747) [on Enterprise]
+  ##   Aborted / ClangFormat was aborted unexpectedly.
+  ##----------------------------------------------------------------------------
+  #clang-format:
+  #- ignore: [ src/ ]
+  #  auto-fix: true
+  #  thresholds: { num-issues: 499 }
+  #- input:  [ src/ ]
+  #  ignore: [ src/vs/workbench/ ]
+  #  auto-fix: true
+  #  thresholds: { num-issues: 930 }
+  #- input:  [ src/vs/workbench/ ]
+  #  auto-fix: true
+  #  thresholds: { num-issues: 780 }
 
   cpd:
     ignore:
