@@ -1,10 +1,16 @@
 inspecode:
 
   clang-format:
-    options:  # experimental settings
-      -style: '{BasedOnStyle: LLVM, IndentWidth: 4}'
+  - ignore: [ src/ ]
     auto-fix: true
-    thresholds: { num-issues: 999 } # 2209 issues, when no options
+    thresholds: { num-issues: 499 }
+  - input:  [ src/ ]
+    ignore: [ src/vs/workbench/ ]
+    auto-fix: true
+    thresholds: { num-issues: 930 }
+  - input:  [ src/vs/workbench/ ]
+    auto-fix: true
+    thresholds: { num-issues: 780 }
 
   cpd:
     thresholds: { num-issues: 999 } # console を表示できない
