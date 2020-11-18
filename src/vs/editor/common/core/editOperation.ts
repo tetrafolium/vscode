@@ -2,44 +2,38 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
+import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
-import { IIdentifiedSingleEditOperation, IRange, IPosition } from 'vs/editor/common/editorCommon';
+import { IIdentifiedSingleEditOperation } from 'vs/editor/common/model';
 
 export class EditOperation {
 
-	public static insert(position: IPosition, text: string): IIdentifiedSingleEditOperation {
+	public static insert(position: Position, text: string): IIdentifiedSingleEditOperation {
 		return {
-			identifier: null,
 			range: new Range(position.lineNumber, position.column, position.lineNumber, position.column),
 			text: text,
 			forceMoveMarkers: true
 		};
 	}
 
-	public static delete(range: IRange): IIdentifiedSingleEditOperation {
+	public static delete(range: Range): IIdentifiedSingleEditOperation {
 		return {
-			identifier: null,
-			range: Range.lift(range),
-			text: null,
-			forceMoveMarkers: true
+			range: range,
+			text: null
 		};
 	}
 
-	public static replace(range: IRange, text: string): IIdentifiedSingleEditOperation {
+	public static replace(range: Range, text: string | null): IIdentifiedSingleEditOperation {
 		return {
-			identifier: null,
-			range: Range.lift(range),
-			text: text,
-			forceMoveMarkers: false
+			range: range,
+			text: text
 		};
 	}
 
-	public static replaceMove(range: IRange, text: string): IIdentifiedSingleEditOperation {
+	public static replaceMove(range: Range, text: string | null): IIdentifiedSingleEditOperation {
 		return {
-			identifier: null,
-			range: Range.lift(range),
+			range: range,
 			text: text,
 			forceMoveMarkers: true
 		};

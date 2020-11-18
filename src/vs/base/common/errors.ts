@@ -2,13 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
-
-import platform = require('vs/base/common/platform');
-import types = require('vs/base/common/types');
-import { IAction } from 'vs/base/common/actions';
-import Severity from 'vs/base/common/severity';
-import { TPromise } from 'vs/base/common/winjs.base';
 
 export interface ErrorListenerCallback {
 	(error: any): void;
@@ -28,7 +21,7 @@ export class ErrorHandler {
 		this.listeners = [];
 
 		this.unexpectedErrorHandler = function (e: any) {
-			platform.setTimeout(() => {
+			setTimeout(() => {
 				if (e.stack) {
 					throw new Error(e.message + '\n\n' + e.stack);
 				}
@@ -38,7 +31,7 @@ export class ErrorHandler {
 		};
 	}
 
-	public addListener(listener: ErrorListenerCallback): ErrorListenerUnbind {
+	addListener(listener: ErrorListenerCallback): ErrorListenerUnbind {
 		this.listeners.push(listener);
 
 		return () => {
@@ -56,42 +49,60 @@ export class ErrorHandler {
 		this.listeners.splice(this.listeners.indexOf(listener), 1);
 	}
 
-	public setUnexpectedErrorHandler(newUnexpectedErrorHandler: (e: any) => void): void {
+	setUnexpectedErrorHandler(newUnexpectedErrorHandler: (e: any) => void): void {
 		this.unexpectedErrorHandler = newUnexpectedErrorHandler;
 	}
 
-	public getUnexpectedErrorHandler(): (e: any) => void {
+	getUnexpectedErrorHandler(): (e: any) => void {
 		return this.unexpectedErrorHandler;
 	}
 
-	public onUnexpectedError(e: any): void {
+	onUnexpectedError(e: any): void {
 		this.unexpectedErrorHandler(e);
 		this.emit(e);
 	}
+
+	// For external errors, we don't want the listeners to be called
+	onUnexpectedExternalError(e: any): void {
+		this.unexpectedErrorHandler(e);
+	}
 }
 
-export let errorHandler = new ErrorHandler();
+export const errorHandler = new ErrorHandler();
 
 export function setUnexpectedErrorHandler(newUnexpectedErrorHandler: (e: any) => void): void {
 	errorHandler.setUnexpectedErrorHandler(newUnexpectedErrorHandler);
 }
 
-export function onUnexpectedError(e: any): void {
-
+export function onUnexpectedError(e: any): undefined {
 	// ignore errors from cancelled promises
 	if (!isPromiseCanceledError(e)) {
 		errorHandler.onUnexpectedError(e);
 	}
+	return undefined;
 }
 
-export function onUnexpectedPromiseError<T>(promise: TPromise<T>): TPromise<T> {
-	return promise.then<T>(null, onUnexpectedError);
+export function onUnexpectedExternalError(e: any): undefined {
+	// ignore errors from cancelled promises
+	if (!isPromiseCanceledError(e)) {
+		errorHandler.onUnexpectedExternalError(e);
+	}
+	return undefined;
 }
 
+export interface SerializedError {
+	readonly $isError: true;
+	readonly name: string;
+	readonly message: string;
+	readonly stack: string;
+}
+
+export function transformErrorForSerialization(error: Error): SerializedError;
+export function transformErrorForSerialization(error: any): any;
 export function transformErrorForSerialization(error: any): any {
 	if (error instanceof Error) {
-		let {name, message} = error;
-		let stack: string = (<any>error).stacktrace || (<any>error).stack;
+		let { name, message } = error;
+		const stack: string = (<any>error).stacktrace || (<any>error).stack;
 		return {
 			$isError: true,
 			name,
@@ -102,6 +113,24 @@ export function transformErrorForSerialization(error: any): any {
 
 	// return as is
 	return error;
+}
+
+// see https://github.com/v8/v8/wiki/Stack%20Trace%20API#basic-stack-traces
+export interface V8CallSite {
+	getThis(): any;
+	getTypeName(): string;
+	getFunction(): string;
+	getFunctionName(): string;
+	getMethodName(): string;
+	getFileName(): string;
+	getLineNumber(): number;
+	getColumnNumber(): number;
+	getEvalOrigin(): string;
+	isToplevel(): boolean;
+	isEval(): boolean;
+	isNative(): boolean;
+	isConstructor(): boolean;
+	toString(): string;
 }
 
 const canceledName = 'Canceled';
@@ -117,16 +146,9 @@ export function isPromiseCanceledError(error: any): boolean {
  * Returns an error that signals cancellation.
  */
 export function canceled(): Error {
-	let error = new Error(canceledName);
+	const error = new Error(canceledName);
 	error.name = error.message;
 	return error;
-}
-
-/**
- * Returns an error that signals something is not implemented.
- */
-export function notImplemented(): Error {
-	return new Error('Not Implemented');
 }
 
 export function illegalArgument(name?: string): Error {
@@ -151,22 +173,9 @@ export function readonly(name?: string): Error {
 		: new Error('readonly property cannot be changed');
 }
 
-export interface IErrorOptions {
-	severity?: Severity;
-	actions?: IAction[];
-}
-
-export function create(message: string, options: IErrorOptions = {}): Error {
-	let result = new Error(message);
-
-	if (types.isNumber(options.severity)) {
-		(<any>result).severity = options.severity;
-	}
-
-	if (options.actions) {
-		(<any>result).actions = options.actions;
-	}
-
+export function disposed(what: string): Error {
+	const result = new Error(`${what} has been disposed`);
+	result.name = 'DISPOSED';
 	return result;
 }
 
@@ -184,4 +193,22 @@ export function getErrorMessage(err: any): string {
 	}
 
 	return String(err);
+}
+
+export class NotImplementedError extends Error {
+	constructor(message?: string) {
+		super('NotImplemented');
+		if (message) {
+			this.message = message;
+		}
+	}
+}
+
+export class NotSupportedError extends Error {
+	constructor(message?: string) {
+		super('NotSupported');
+		if (message) {
+			this.message = message;
+		}
+	}
 }

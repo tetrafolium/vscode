@@ -2,114 +2,133 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
+import { FastDomNode, createFastDomNode } from 'vs/base/browser/fastDomNode';
 import { onUnexpectedError } from 'vs/base/common/errors';
-import { StyleMutator } from 'vs/base/browser/styleMutator';
-import * as editorCommon from 'vs/editor/common/editorCommon';
-import { ClassNames, IViewZone } from 'vs/editor/browser/editorBrowser';
+import { IViewZone, IViewZoneChangeAccessor } from 'vs/editor/browser/editorBrowser';
 import { ViewPart } from 'vs/editor/browser/view/viewPart';
+import { Position } from 'vs/editor/common/core/position';
+import { RenderingContext, RestrictedRenderingContext } from 'vs/editor/common/view/renderingContext';
 import { ViewContext } from 'vs/editor/common/view/viewContext';
-import { IRenderingContext, IRestrictedRenderingContext } from 'vs/editor/common/view/renderingContext';
-import { IWhitespaceManager } from 'vs/editor/browser/viewLayout/layoutProvider';
+import * as viewEvents from 'vs/editor/common/view/viewEvents';
+import { IViewWhitespaceViewportData } from 'vs/editor/common/viewModel/viewModel';
+import { EditorOption } from 'vs/editor/common/config/editorOptions';
+import { IWhitespaceChangeAccessor, IEditorWhitespace } from 'vs/editor/common/viewLayout/linesLayout';
 
 export interface IMyViewZone {
-	whitespaceId: number;
+	whitespaceId: string;
 	delegate: IViewZone;
 	isVisible: boolean;
-}
-
-export interface IMyRenderData {
-	data: editorCommon.IViewWhitespaceViewportData[];
+	domNode: FastDomNode<HTMLElement>;
+	marginDomNode: FastDomNode<HTMLElement> | null;
 }
 
 interface IComputedViewZoneProps {
 	afterViewLineNumber: number;
 	heightInPx: number;
+	minWidthInPx: number;
 }
+
+const invalidFunc = () => { throw new Error(`Invalid change accessor`); };
 
 export class ViewZones extends ViewPart {
 
-	private _whitespaceManager: IWhitespaceManager;
 	private _zones: { [id: string]: IMyViewZone; };
 	private _lineHeight: number;
 	private _contentWidth: number;
+	private _contentLeft: number;
 
-	public domNode: HTMLElement;
+	public domNode: FastDomNode<HTMLElement>;
 
-	constructor(context: ViewContext, whitespaceManager: IWhitespaceManager) {
+	public marginDomNode: FastDomNode<HTMLElement>;
+
+	constructor(context: ViewContext) {
 		super(context);
-		this._lineHeight = this._context.configuration.editor.lineHeight;
-		this._contentWidth = this._context.configuration.editor.layoutInfo.contentWidth;
-		this._whitespaceManager = whitespaceManager;
-		this.domNode = document.createElement('div');
-		this.domNode.className = ClassNames.VIEW_ZONES;
-		this.domNode.style.position = 'absolute';
+		const options = this._context.configuration.options;
+		const layoutInfo = options.get(EditorOption.layoutInfo);
+
+		this._lineHeight = options.get(EditorOption.lineHeight);
+		this._contentWidth = layoutInfo.contentWidth;
+		this._contentLeft = layoutInfo.contentLeft;
+
+		this.domNode = createFastDomNode(document.createElement('div'));
+		this.domNode.setClassName('view-zones');
+		this.domNode.setPosition('absolute');
 		this.domNode.setAttribute('role', 'presentation');
 		this.domNode.setAttribute('aria-hidden', 'true');
+
+		this.marginDomNode = createFastDomNode(document.createElement('div'));
+		this.marginDomNode.setClassName('margin-view-zones');
+		this.marginDomNode.setPosition('absolute');
+		this.marginDomNode.setAttribute('role', 'presentation');
+		this.marginDomNode.setAttribute('aria-hidden', 'true');
+
 		this._zones = {};
 	}
 
 	public dispose(): void {
 		super.dispose();
-		this._whitespaceManager = null;
 		this._zones = {};
 	}
 
 	// ---- begin view event handlers
 
 	private _recomputeWhitespacesProps(): boolean {
-		let hadAChange = false;
-
-		let keys = Object.keys(this._zones);
-		for (let i = 0, len = keys.length; i < len; i++) {
-			let id = keys[i];
-			let zone = this._zones[id];
-			let props = this._computeWhitespaceProps(zone.delegate);
-			if (this._whitespaceManager.changeWhitespace(parseInt(id, 10), props.afterViewLineNumber, props.heightInPx)) {
-				this._safeCallOnComputedHeight(zone.delegate, props.heightInPx);
-				hadAChange = true;
-			}
+		const whitespaces = this._context.viewLayout.getWhitespaces();
+		const oldWhitespaces = new Map<string, IEditorWhitespace>();
+		for (const whitespace of whitespaces) {
+			oldWhitespaces.set(whitespace.id, whitespace);
 		}
-
+		let hadAChange = false;
+		this._context.model.changeWhitespace((whitespaceAccessor: IWhitespaceChangeAccessor) => {
+			const keys = Object.keys(this._zones);
+			for (let i = 0, len = keys.length; i < len; i++) {
+				const id = keys[i];
+				const zone = this._zones[id];
+				const props = this._computeWhitespaceProps(zone.delegate);
+				const oldWhitespace = oldWhitespaces.get(id);
+				if (oldWhitespace && (oldWhitespace.afterLineNumber !== props.afterViewLineNumber || oldWhitespace.height !== props.heightInPx)) {
+					whitespaceAccessor.changeOneWhitespace(id, props.afterViewLineNumber, props.heightInPx);
+					this._safeCallOnComputedHeight(zone.delegate, props.heightInPx);
+					hadAChange = true;
+				}
+			}
+		});
 		return hadAChange;
 	}
 
-	public onConfigurationChanged(e: editorCommon.IConfigurationChangedEvent): boolean {
+	public onConfigurationChanged(e: viewEvents.ViewConfigurationChangedEvent): boolean {
+		const options = this._context.configuration.options;
+		const layoutInfo = options.get(EditorOption.layoutInfo);
 
-		if (e.lineHeight) {
-			this._lineHeight = this._context.configuration.editor.lineHeight;
-			return this._recomputeWhitespacesProps();
+		this._lineHeight = options.get(EditorOption.lineHeight);
+		this._contentWidth = layoutInfo.contentWidth;
+		this._contentLeft = layoutInfo.contentLeft;
+
+		if (e.hasChanged(EditorOption.lineHeight)) {
+			this._recomputeWhitespacesProps();
 		}
 
-		if (e.layoutInfo) {
-			this._contentWidth = this._context.configuration.editor.layoutInfo.contentWidth;
-		}
-
-		return false;
+		return true;
 	}
 
-	public onLineMappingChanged(): boolean {
+	public onLineMappingChanged(e: viewEvents.ViewLineMappingChangedEvent): boolean {
 		return this._recomputeWhitespacesProps();
 	}
 
-	public onLayoutChanged(layoutInfo: editorCommon.EditorLayoutInfo): boolean {
+	public onLinesDeleted(e: viewEvents.ViewLinesDeletedEvent): boolean {
 		return true;
 	}
 
-	public onScrollChanged(e: editorCommon.IScrollEvent): boolean {
+	public onScrollChanged(e: viewEvents.ViewScrollChangedEvent): boolean {
 		return e.scrollTopChanged || e.scrollWidthChanged;
 	}
 
-	public onZonesChanged(): boolean {
+	public onZonesChanged(e: viewEvents.ViewZonesChangedEvent): boolean {
 		return true;
 	}
 
-	public onModelLinesDeleted(e: editorCommon.IModelContentChangedLinesDeletedEvent): boolean {
-		return true;
-	}
-
-	public onModelLinesInserted(e: editorCommon.IViewLinesInsertedEvent): boolean {
+	public onLinesInserted(e: viewEvents.ViewLinesInsertedEvent): boolean {
 		return true;
 	}
 
@@ -124,34 +143,34 @@ export class ViewZones extends ViewPart {
 		return 10000;
 	}
 
-
 	private _computeWhitespaceProps(zone: IViewZone): IComputedViewZoneProps {
 		if (zone.afterLineNumber === 0) {
 			return {
 				afterViewLineNumber: 0,
-				heightInPx: this._heightInPixels(zone)
+				heightInPx: this._heightInPixels(zone),
+				minWidthInPx: this._minWidthInPixels(zone)
 			};
 		}
 
-		let zoneAfterModelPosition: editorCommon.IPosition;
+		let zoneAfterModelPosition: Position;
 		if (typeof zone.afterColumn !== 'undefined') {
 			zoneAfterModelPosition = this._context.model.validateModelPosition({
 				lineNumber: zone.afterLineNumber,
 				column: zone.afterColumn
 			});
 		} else {
-			let validAfterLineNumber = this._context.model.validateModelPosition({
+			const validAfterLineNumber = this._context.model.validateModelPosition({
 				lineNumber: zone.afterLineNumber,
 				column: 1
 			}).lineNumber;
 
-			zoneAfterModelPosition = {
-				lineNumber: validAfterLineNumber,
-				column: this._context.model.getModelLineMaxColumn(validAfterLineNumber)
-			};
+			zoneAfterModelPosition = new Position(
+				validAfterLineNumber,
+				this._context.model.getModelLineMaxColumn(validAfterLineNumber)
+			);
 		}
 
-		let zoneBeforeModelPosition: editorCommon.IPosition;
+		let zoneBeforeModelPosition: Position;
 		if (zoneAfterModelPosition.column === this._context.model.getModelLineMaxColumn(zoneAfterModelPosition.lineNumber)) {
 			zoneBeforeModelPosition = this._context.model.validateModelPosition({
 				lineNumber: zoneAfterModelPosition.lineNumber + 1,
@@ -164,49 +183,101 @@ export class ViewZones extends ViewPart {
 			});
 		}
 
-		let viewPosition = this._context.model.convertModelPositionToViewPosition(zoneAfterModelPosition.lineNumber, zoneAfterModelPosition.column);
-		let isVisible = this._context.model.modelPositionIsVisible(zoneBeforeModelPosition);
+		const viewPosition = this._context.model.coordinatesConverter.convertModelPositionToViewPosition(zoneAfterModelPosition);
+		const isVisible = this._context.model.coordinatesConverter.modelPositionIsVisible(zoneBeforeModelPosition);
 		return {
 			afterViewLineNumber: viewPosition.lineNumber,
-			heightInPx: (isVisible ? this._heightInPixels(zone) : 0)
+			heightInPx: (isVisible ? this._heightInPixels(zone) : 0),
+			minWidthInPx: this._minWidthInPixels(zone)
 		};
 	}
 
-	public addZone(zone: IViewZone): number {
-		let props = this._computeWhitespaceProps(zone);
-		let whitespaceId = this._whitespaceManager.addWhitespace(props.afterViewLineNumber, this._getZoneOrdinal(zone), props.heightInPx);
+	public changeViewZones(callback: (changeAccessor: IViewZoneChangeAccessor) => any): boolean {
+		let zonesHaveChanged = false;
 
-		let myZone: IMyViewZone = {
+		this._context.model.changeWhitespace((whitespaceAccessor: IWhitespaceChangeAccessor) => {
+
+			const changeAccessor: IViewZoneChangeAccessor = {
+				addZone: (zone: IViewZone): string => {
+					zonesHaveChanged = true;
+					return this._addZone(whitespaceAccessor, zone);
+				},
+				removeZone: (id: string): void => {
+					if (!id) {
+						return;
+					}
+					zonesHaveChanged = this._removeZone(whitespaceAccessor, id) || zonesHaveChanged;
+				},
+				layoutZone: (id: string): void => {
+					if (!id) {
+						return;
+					}
+					zonesHaveChanged = this._layoutZone(whitespaceAccessor, id) || zonesHaveChanged;
+				}
+			};
+
+			safeInvoke1Arg(callback, changeAccessor);
+
+			// Invalidate changeAccessor
+			changeAccessor.addZone = invalidFunc;
+			changeAccessor.removeZone = invalidFunc;
+			changeAccessor.layoutZone = invalidFunc;
+		});
+
+		return zonesHaveChanged;
+	}
+
+	private _addZone(whitespaceAccessor: IWhitespaceChangeAccessor, zone: IViewZone): string {
+		const props = this._computeWhitespaceProps(zone);
+		const whitespaceId = whitespaceAccessor.insertWhitespace(props.afterViewLineNumber, this._getZoneOrdinal(zone), props.heightInPx, props.minWidthInPx);
+
+		const myZone: IMyViewZone = {
 			whitespaceId: whitespaceId,
 			delegate: zone,
-			isVisible: false
+			isVisible: false,
+			domNode: createFastDomNode(zone.domNode),
+			marginDomNode: zone.marginDomNode ? createFastDomNode(zone.marginDomNode) : null
 		};
 
 		this._safeCallOnComputedHeight(myZone.delegate, props.heightInPx);
 
-		myZone.delegate.domNode.style.position = 'absolute';
-		myZone.delegate.domNode.style.width = '100%';
-		StyleMutator.setDisplay(myZone.delegate.domNode, 'none');
+		myZone.domNode.setPosition('absolute');
+		myZone.domNode.domNode.style.width = '100%';
+		myZone.domNode.setDisplay('none');
+		myZone.domNode.setAttribute('monaco-view-zone', myZone.whitespaceId);
+		this.domNode.appendChild(myZone.domNode);
 
-		this._zones[myZone.whitespaceId.toString()] = myZone;
+		if (myZone.marginDomNode) {
+			myZone.marginDomNode.setPosition('absolute');
+			myZone.marginDomNode.domNode.style.width = '100%';
+			myZone.marginDomNode.setDisplay('none');
+			myZone.marginDomNode.setAttribute('monaco-view-zone', myZone.whitespaceId);
+			this.marginDomNode.appendChild(myZone.marginDomNode);
+		}
 
-		myZone.delegate.domNode.setAttribute('monaco-view-zone', myZone.whitespaceId.toString());
-		this.domNode.appendChild(myZone.delegate.domNode);
+		this._zones[myZone.whitespaceId] = myZone;
+
 
 		this.setShouldRender();
 
 		return myZone.whitespaceId;
 	}
 
-	public removeZone(id: number): boolean {
-		if (this._zones.hasOwnProperty(id.toString())) {
-			let zone = this._zones[id.toString()];
-			delete this._zones[id.toString()];
-			this._whitespaceManager.removeWhitespace(zone.whitespaceId);
+	private _removeZone(whitespaceAccessor: IWhitespaceChangeAccessor, id: string): boolean {
+		if (this._zones.hasOwnProperty(id)) {
+			const zone = this._zones[id];
+			delete this._zones[id];
+			whitespaceAccessor.removeWhitespace(zone.whitespaceId);
 
-			zone.delegate.domNode.removeAttribute('monaco-visible-view-zone');
-			zone.delegate.domNode.removeAttribute('monaco-view-zone');
-			zone.delegate.domNode.parentNode.removeChild(zone.delegate.domNode);
+			zone.domNode.removeAttribute('monaco-visible-view-zone');
+			zone.domNode.removeAttribute('monaco-view-zone');
+			zone.domNode.domNode.parentNode!.removeChild(zone.domNode.domNode);
+
+			if (zone.marginDomNode) {
+				zone.marginDomNode.removeAttribute('monaco-visible-view-zone');
+				zone.marginDomNode.removeAttribute('monaco-view-zone');
+				zone.marginDomNode.domNode.parentNode!.removeChild(zone.marginDomNode.domNode);
+			}
 
 			this.setShouldRender();
 
@@ -215,27 +286,26 @@ export class ViewZones extends ViewPart {
 		return false;
 	}
 
-	public layoutZone(id: number): boolean {
-		let changed = false;
-		if (this._zones.hasOwnProperty(id.toString())) {
-			let zone = this._zones[id.toString()];
-			let props = this._computeWhitespaceProps(zone.delegate);
-			// let newOrdinal = this._getZoneOrdinal(zone.delegate);
-			changed = this._whitespaceManager.changeWhitespace(zone.whitespaceId, props.afterViewLineNumber, props.heightInPx) || changed;
+	private _layoutZone(whitespaceAccessor: IWhitespaceChangeAccessor, id: string): boolean {
+		if (this._zones.hasOwnProperty(id)) {
+			const zone = this._zones[id];
+			const props = this._computeWhitespaceProps(zone.delegate);
+			// const newOrdinal = this._getZoneOrdinal(zone.delegate);
+			whitespaceAccessor.changeOneWhitespace(zone.whitespaceId, props.afterViewLineNumber, props.heightInPx);
 			// TODO@Alex: change `newOrdinal` too
 
-			if (changed) {
-				this._safeCallOnComputedHeight(zone.delegate, props.heightInPx);
-				this.setShouldRender();
-			}
+			this._safeCallOnComputedHeight(zone.delegate, props.heightInPx);
+			this.setShouldRender();
+
+			return true;
 		}
-		return changed;
+		return false;
 	}
 
-	public shouldSuppressMouseDownOnViewZone(id: number): boolean {
-		if (this._zones.hasOwnProperty(id.toString())) {
-			let zone = this._zones[id.toString()];
-			return zone.delegate.suppressMouseDown;
+	public shouldSuppressMouseDownOnViewZone(id: string): boolean {
+		if (this._zones.hasOwnProperty(id)) {
+			const zone = this._zones[id];
+			return Boolean(zone.delegate.suppressMouseDown);
 		}
 		return false;
 	}
@@ -248,6 +318,13 @@ export class ViewZones extends ViewPart {
 			return this._lineHeight * zone.heightInLines;
 		}
 		return this._lineHeight;
+	}
+
+	private _minWidthInPixels(zone: IViewZone): number {
+		if (typeof zone.minWidthInPx === 'number') {
+			return zone.minWidthInPx;
+		}
+		return 0;
 	}
 
 	private _safeCallOnComputedHeight(zone: IViewZone, height: number): void {
@@ -270,50 +347,67 @@ export class ViewZones extends ViewPart {
 		}
 	}
 
-	public prepareRender(ctx: IRenderingContext): void {
+	public prepareRender(ctx: RenderingContext): void {
 		// Nothing to read
-		if (!this.shouldRender()) {
-			throw new Error('I did not ask to render!');
-		}
 	}
 
-	public render(ctx: IRestrictedRenderingContext): void {
-		let visibleWhitespaces = this._whitespaceManager.getWhitespaceViewportData();
-		let visibleZones: { [id: string]: editorCommon.IViewWhitespaceViewportData; } = {};
+	public render(ctx: RestrictedRenderingContext): void {
+		const visibleWhitespaces = ctx.viewportData.whitespaceViewportData;
+		const visibleZones: { [id: string]: IViewWhitespaceViewportData; } = {};
 
 		let hasVisibleZone = false;
 		for (let i = 0, len = visibleWhitespaces.length; i < len; i++) {
-			visibleZones[visibleWhitespaces[i].id.toString()] = visibleWhitespaces[i];
+			visibleZones[visibleWhitespaces[i].id] = visibleWhitespaces[i];
 			hasVisibleZone = true;
 		}
 
-		let keys = Object.keys(this._zones);
+		const keys = Object.keys(this._zones);
 		for (let i = 0, len = keys.length; i < len; i++) {
-			let id = keys[i];
-			let zone = this._zones[id];
+			const id = keys[i];
+			const zone = this._zones[id];
 
+			let newTop = 0;
+			let newHeight = 0;
+			let newDisplay = 'none';
 			if (visibleZones.hasOwnProperty(id)) {
+				newTop = visibleZones[id].verticalOffset - ctx.bigNumbersDelta;
+				newHeight = visibleZones[id].height;
+				newDisplay = 'block';
 				// zone is visible
-				StyleMutator.setTop(zone.delegate.domNode, (visibleZones[id].verticalOffset - ctx.bigNumbersDelta));
-				StyleMutator.setHeight(zone.delegate.domNode, visibleZones[id].height);
 				if (!zone.isVisible) {
-					StyleMutator.setDisplay(zone.delegate.domNode, 'block');
-					zone.delegate.domNode.setAttribute('monaco-visible-view-zone', 'true');
+					zone.domNode.setAttribute('monaco-visible-view-zone', 'true');
 					zone.isVisible = true;
 				}
 				this._safeCallOnDomNodeTop(zone.delegate, ctx.getScrolledTopFromAbsoluteTop(visibleZones[id].verticalOffset));
 			} else {
 				if (zone.isVisible) {
-					StyleMutator.setDisplay(zone.delegate.domNode, 'none');
-					zone.delegate.domNode.removeAttribute('monaco-visible-view-zone');
+					zone.domNode.removeAttribute('monaco-visible-view-zone');
 					zone.isVisible = false;
 				}
 				this._safeCallOnDomNodeTop(zone.delegate, ctx.getScrolledTopFromAbsoluteTop(-1000000));
 			}
+			zone.domNode.setTop(newTop);
+			zone.domNode.setHeight(newHeight);
+			zone.domNode.setDisplay(newDisplay);
+
+			if (zone.marginDomNode) {
+				zone.marginDomNode.setTop(newTop);
+				zone.marginDomNode.setHeight(newHeight);
+				zone.marginDomNode.setDisplay(newDisplay);
+			}
 		}
 
 		if (hasVisibleZone) {
-			StyleMutator.setWidth(this.domNode, Math.max(ctx.scrollWidth, this._contentWidth));
+			this.domNode.setWidth(Math.max(ctx.scrollWidth, this._contentWidth));
+			this.marginDomNode.setWidth(this._contentLeft);
 		}
+	}
+}
+
+function safeInvoke1Arg(func: Function, arg1: any): any {
+	try {
+		return func(arg1);
+	} catch (e) {
+		onUnexpectedError(e);
 	}
 }

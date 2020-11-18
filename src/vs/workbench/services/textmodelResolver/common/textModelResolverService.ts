@@ -2,146 +2,225 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
-import { TPromise } from 'vs/base/common/winjs.base';
-import URI from 'vs/base/common/uri';
+import { URI } from 'vs/base/common/uri';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { IModel } from 'vs/editor/common/editorCommon';
-import { ITextEditorModel } from 'vs/platform/editor/common/editor';
-import { IDisposable } from 'vs/base/common/lifecycle';
+import { ITextModel } from 'vs/editor/common/model';
+import { IDisposable, toDisposable, IReference, ReferenceCollection, Disposable } from 'vs/base/common/lifecycle';
 import { IModelService } from 'vs/editor/common/services/modelService';
-import { sequence } from 'vs/base/common/async';
 import { ResourceEditorModel } from 'vs/workbench/common/editor/resourceEditorModel';
-import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
-import network = require('vs/base/common/network');
-import { ITextModelResolverService, ITextModelContentProvider } from 'vs/platform/textmodelResolver/common/resolver';
-import { IUntitledEditorService } from 'vs/workbench/services/untitled/common/untitledEditorService';
-import { UntitledEditorInput } from 'vs/workbench/common/editor/untitledEditorInput';
-import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { EditorInput } from 'vs/workbench/common/editor';
+import { ITextFileService, TextFileLoadReason } from 'vs/workbench/services/textfile/common/textfiles';
+import * as network from 'vs/base/common/network';
+import { ITextModelService, ITextModelContentProvider, ITextEditorModel, IResolvedTextEditorModel } from 'vs/editor/common/services/resolverService';
+import { TextFileEditorModel } from 'vs/workbench/services/textfile/common/textFileEditorModel';
+import { IFileService } from 'vs/platform/files/common/files';
+import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
+import { IUndoRedoService } from 'vs/platform/undoRedo/common/undoRedo';
+import { ModelUndoRedoParticipant } from 'vs/editor/common/services/modelUndoRedoParticipant';
+import { IUriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentity';
 
-export class TextModelResolverService implements ITextModelResolverService {
+class ResourceModelCollection extends ReferenceCollection<Promise<ITextEditorModel>> {
 
-	public _serviceBrand: any;
-
-	private loadingTextModels: { [uri: string]: TPromise<IModel> } = Object.create(null);
-	private contentProviderRegistry: { [scheme: string]: ITextModelContentProvider[] } = Object.create(null);
+	private readonly providers = new Map<string, ITextModelContentProvider[]>();
+	private readonly modelsToDispose = new Set<string>();
 
 	constructor(
-		@ITextFileService private textFileService: ITextFileService,
-		@IUntitledEditorService private untitledEditorService: IUntitledEditorService,
-		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
-		@IInstantiationService private instantiationService: IInstantiationService,
-		@IModelService private modelService: IModelService
+		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@ITextFileService private readonly textFileService: ITextFileService,
+		@IFileService private readonly fileService: IFileService,
+		@IModelService private readonly modelService: IModelService
 	) {
+		super();
 	}
 
-	public resolve(resource: URI): TPromise<ITextEditorModel> {
+	createReferencedObject(key: string): Promise<ITextEditorModel> {
+		return this.doCreateReferencedObject(key);
+	}
 
-		// File Schema: use text file service
-		if (resource.scheme === network.Schemas.file) {
-			return this.textFileService.models.loadOrCreate(resource);
-		}
+	private async doCreateReferencedObject(key: string, skipActivateProvider?: boolean): Promise<ITextEditorModel> {
 
-		// Untitled Schema: go through cached input
-		if (resource.scheme === UntitledEditorInput.SCHEMA) {
-			return this.untitledEditorService.createOrGet(resource).resolve();
-		}
+		// Untrack as being disposed
+		this.modelsToDispose.delete(key);
 
-		// In Memory: only works on the active editor
+		// inMemory Schema: go through model service cache
+		const resource = URI.parse(key);
 		if (resource.scheme === network.Schemas.inMemory) {
-			return this.editorService.createInput({ resource }).then(input => {
-				if (input instanceof EditorInput) {
-					return input.resolve();
-				}
-
-				return null;
-			});
-		}
-
-		// Any other resource: use content provider registry
-		return this.resolveTextModelContent(this.modelService, resource).then(() => this.instantiationService.createInstance(ResourceEditorModel, resource));
-	}
-
-	public registerTextModelContentProvider(scheme: string, provider: ITextModelContentProvider): IDisposable {
-		let array = this.contentProviderRegistry[scheme];
-		if (!array) {
-			array = [provider];
-			this.contentProviderRegistry[scheme] = array;
-		} else {
-			array.unshift(provider);
-		}
-
-		const registry = this.contentProviderRegistry;
-		return {
-			dispose() {
-				const array = registry[scheme];
-				const idx = array.indexOf(provider);
-				if (idx >= 0) {
-					array.splice(idx, 1);
-					if (array.length === 0) {
-						delete registry[scheme];
-					}
-				}
-			}
-		};
-	}
-
-	private resolveTextModelContent(modelService: IModelService, resource: URI): TPromise<IModel> {
-		const model = modelService.getModel(resource);
-		if (model) {
-			return TPromise.as(model);
-		}
-
-		let loadingTextModel = this.loadingTextModels[resource.toString()];
-		if (!loadingTextModel) {
-
-			// make sure we have a provider this scheme
-			// the resource uses
-			const contentProviders = this.contentProviderRegistry[resource.scheme];
-			if (!contentProviders) {
-				return TPromise.wrapError(`No model with uri '${resource}' nor a resolver for the scheme '${resource.scheme}'.`);
+			const cachedModel = this.modelService.getModel(resource);
+			if (!cachedModel) {
+				throw new Error(`Unable to resolve inMemory resource ${key}`);
 			}
 
-			// load the model-content from the provider and cache
-			// the loading such that we don't create the same model
-			// twice
-			this.loadingTextModels[resource.toString()] = loadingTextModel = new TPromise<IModel>((resolve, reject) => {
-				let result: IModel;
-				let lastError: any;
-
-				sequence(contentProviders.map(provider => {
-					return () => {
-						if (!result) {
-							const contentPromise = provider.provideTextContent(resource);
-							if (!contentPromise) {
-								return TPromise.wrapError<any>(`No resolver for the scheme '${resource.scheme}' found.`);
-							}
-
-							return contentPromise.then(value => {
-								result = value;
-							}, err => {
-								lastError = err;
-							});
-						}
-					};
-				})).then(() => {
-					if (!result && lastError) {
-						reject(lastError);
-					} else {
-						resolve(result);
-					}
-				}, reject);
-
-			}, function () {
-				// no cancellation when caching promises
-			});
-
-			// remove the cached promise 'cos the model is now known to the model service (see above)
-			loadingTextModel.then(() => delete this.loadingTextModels[resource.toString()], () => delete this.loadingTextModels[resource.toString()]);
+			return this.instantiationService.createInstance(ResourceEditorModel, resource);
 		}
 
-		return loadingTextModel;
+		// Untitled Schema: go through untitled text service
+		if (resource.scheme === network.Schemas.untitled) {
+			return this.textFileService.untitled.resolve({ untitledResource: resource });
+		}
+
+		// File or remote file: go through text file service
+		if (this.fileService.canHandleResource(resource)) {
+			return this.textFileService.files.resolve(resource, { reason: TextFileLoadReason.REFERENCE });
+		}
+
+		// Virtual documents
+		if (this.providers.has(resource.scheme)) {
+			await this.resolveTextModelContent(key);
+
+			return this.instantiationService.createInstance(ResourceEditorModel, resource);
+		}
+
+		// Either unknown schema, or not yet registered, try to activate
+		if (!skipActivateProvider) {
+			await this.fileService.activateProvider(resource.scheme);
+
+			return this.doCreateReferencedObject(key, true);
+		}
+
+		throw new Error(`Unable to resolve resource ${key}`);
+	}
+
+	destroyReferencedObject(key: string, modelPromise: Promise<ITextEditorModel>): void {
+
+		// untitled and inMemory are bound to a different lifecycle
+		const resource = URI.parse(key);
+		if (resource.scheme === network.Schemas.untitled || resource.scheme === network.Schemas.inMemory) {
+			return;
+		}
+
+		// Track as being disposed before waiting for model to load
+		// to handle the case that the reference is aquired again
+		this.modelsToDispose.add(key);
+
+		(async () => {
+			try {
+				const model = await modelPromise;
+
+				if (!this.modelsToDispose.has(key)) {
+					// return if model has been aquired again meanwhile
+					return;
+				}
+
+				if (model instanceof TextFileEditorModel) {
+					// text file models have conditions that prevent them
+					// from dispose, so we have to wait until we can dispose
+					await this.textFileService.files.canDispose(model);
+				}
+
+				if (!this.modelsToDispose.has(key)) {
+					// return if model has been aquired again meanwhile
+					return;
+				}
+
+				// Finally we can dispose the model
+				model.dispose();
+			} catch (error) {
+				// ignore
+			} finally {
+				this.modelsToDispose.delete(key); // Untrack as being disposed
+			}
+		})();
+	}
+
+	registerTextModelContentProvider(scheme: string, provider: ITextModelContentProvider): IDisposable {
+		let providers = this.providers.get(scheme);
+		if (!providers) {
+			providers = [];
+			this.providers.set(scheme, providers);
+		}
+
+		providers.unshift(provider);
+
+		return toDisposable(() => {
+			const providersForScheme = this.providers.get(scheme);
+			if (!providersForScheme) {
+				return;
+			}
+
+			const index = providersForScheme.indexOf(provider);
+			if (index === -1) {
+				return;
+			}
+
+			providersForScheme.splice(index, 1);
+
+			if (providersForScheme.length === 0) {
+				this.providers.delete(scheme);
+			}
+		});
+	}
+
+	hasTextModelContentProvider(scheme: string): boolean {
+		return this.providers.get(scheme) !== undefined;
+	}
+
+	private async resolveTextModelContent(key: string): Promise<ITextModel> {
+		const resource = URI.parse(key);
+		const providersForScheme = this.providers.get(resource.scheme) || [];
+
+		for (const provider of providersForScheme) {
+			const value = await provider.provideTextContent(resource);
+			if (value) {
+				return value;
+			}
+		}
+
+		throw new Error(`Unable to resolve text model content for resource ${key}`);
 	}
 }
+
+export class TextModelResolverService extends Disposable implements ITextModelService {
+
+	declare readonly _serviceBrand: undefined;
+
+	private readonly resourceModelCollection = this.instantiationService.createInstance(ResourceModelCollection);
+
+	constructor(
+		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IFileService private readonly fileService: IFileService,
+		@IUndoRedoService private readonly undoRedoService: IUndoRedoService,
+		@IModelService private readonly modelService: IModelService,
+		@IUriIdentityService private readonly uriIdentityService: IUriIdentityService,
+	) {
+		super();
+
+		this._register(new ModelUndoRedoParticipant(this.modelService, this, this.undoRedoService));
+	}
+
+	async createModelReference(resource: URI): Promise<IReference<IResolvedTextEditorModel>> {
+
+		// From this moment on, only operate on the canonical resource
+		// to ensure we reduce the chance of resolving the same resource
+		// with different resource forms (e.g. path casing on Windows)
+		resource = this.uriIdentityService.asCanonicalUri(resource);
+
+		const ref = this.resourceModelCollection.acquire(resource.toString());
+
+		try {
+			const model = await ref.object;
+
+			return {
+				object: model as IResolvedTextEditorModel,
+				dispose: () => ref.dispose()
+			};
+		} catch (error) {
+			ref.dispose();
+
+			throw error;
+		}
+	}
+
+	registerTextModelContentProvider(scheme: string, provider: ITextModelContentProvider): IDisposable {
+		return this.resourceModelCollection.registerTextModelContentProvider(scheme, provider);
+	}
+
+	canHandleResource(resource: URI): boolean {
+		if (this.fileService.canHandleResource(resource) || resource.scheme === network.Schemas.untitled || resource.scheme === network.Schemas.inMemory) {
+			return true; // we handle file://, untitled:// and inMemory:// automatically
+		}
+
+		return this.resourceModelCollection.hasTextModelContentProvider(resource.scheme);
+	}
+}
+
+registerSingleton(ITextModelService, TextModelResolverService, true);

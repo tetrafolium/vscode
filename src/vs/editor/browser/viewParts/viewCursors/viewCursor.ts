@@ -2,81 +2,86 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
-import { FastDomNode, createFastDomNode } from 'vs/base/browser/styleMutator';
-import { IConfigurationChangedEvent, IPosition, TextEditorCursorStyle } from 'vs/editor/common/editorCommon';
+import * as dom from 'vs/base/browser/dom';
+import { FastDomNode, createFastDomNode } from 'vs/base/browser/fastDomNode';
+import * as strings from 'vs/base/common/strings';
 import { Configuration } from 'vs/editor/browser/config/configuration';
+import { TextEditorCursorStyle, EditorOption } from 'vs/editor/common/config/editorOptions';
+import { Position } from 'vs/editor/common/core/position';
+import { Range } from 'vs/editor/common/core/range';
+import { RenderingContext, RestrictedRenderingContext } from 'vs/editor/common/view/renderingContext';
 import { ViewContext } from 'vs/editor/common/view/viewContext';
-import { IRenderingContext, IRestrictedRenderingContext } from 'vs/editor/common/view/renderingContext';
+import * as viewEvents from 'vs/editor/common/view/viewEvents';
+import { MOUSE_CURSOR_TEXT_CSS_CLASS_NAME } from 'vs/base/browser/ui/mouseCursor/mouseCursor';
 
 export interface IViewCursorRenderData {
-	position: IPosition;
-	contentTop: number;
+	domNode: HTMLElement;
+	position: Position;
 	contentLeft: number;
 	width: number;
 	height: number;
 }
 
+class ViewCursorRenderData {
+	constructor(
+		public readonly top: number,
+		public readonly left: number,
+		public readonly width: number,
+		public readonly height: number,
+		public readonly textContent: string,
+		public readonly textContentClassName: string
+	) { }
+}
+
 export class ViewCursor {
-	private _context: ViewContext;
-	private _position: IPosition;
-	private _domNode: FastDomNode;
-	private _positionTop: number;
-	private _positionLeft: number;
-	private _isInEditableRange: boolean;
-	private _isVisible: boolean;
-	private _isInViewport: boolean;
+	private readonly _context: ViewContext;
+	private readonly _domNode: FastDomNode<HTMLElement>;
+
 	private _cursorStyle: TextEditorCursorStyle;
-	private _lastRenderedContent: string;
+	private _lineCursorWidth: number;
 	private _lineHeight: number;
+	private _typicalHalfwidthCharacterWidth: number;
 
-	constructor(context: ViewContext, isSecondary: boolean) {
+	private _isVisible: boolean;
+
+	private _position: Position;
+
+	private _lastRenderedContent: string;
+	private _renderData: ViewCursorRenderData | null;
+
+	constructor(context: ViewContext) {
 		this._context = context;
-		this._cursorStyle = this._context.configuration.editor.viewInfo.cursorStyle;
-		this._lineHeight = this._context.configuration.editor.lineHeight;
-		this._lastRenderedContent = '';
+		const options = this._context.configuration.options;
+		const fontInfo = options.get(EditorOption.fontInfo);
 
-		this._isInEditableRange = true;
+		this._cursorStyle = options.get(EditorOption.cursorStyle);
+		this._lineHeight = options.get(EditorOption.lineHeight);
+		this._typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
+		this._lineCursorWidth = Math.min(options.get(EditorOption.cursorWidth), this._typicalHalfwidthCharacterWidth);
 
-		this._domNode = this._createCursorDomNode(isSecondary);
-		Configuration.applyFontInfo(this._domNode, this._context.configuration.editor.fontInfo);
 		this._isVisible = true;
+
+		// Create the dom node
+		this._domNode = createFastDomNode(document.createElement('div'));
+		this._domNode.setClassName(`cursor ${MOUSE_CURSOR_TEXT_CSS_CLASS_NAME}`);
+		this._domNode.setHeight(this._lineHeight);
+		this._domNode.setTop(0);
+		this._domNode.setLeft(0);
+		Configuration.applyFontInfo(this._domNode, fontInfo);
 		this._domNode.setDisplay('none');
-		this.updatePosition({
-			lineNumber: 1,
-			column: 1
-		});
+
+		this._position = new Position(1, 1);
+
+		this._lastRenderedContent = '';
+		this._renderData = null;
 	}
 
-	private _createCursorDomNode(isSecondary: boolean): FastDomNode {
-		let domNode = createFastDomNode(document.createElement('div'));
-		if (isSecondary) {
-			domNode.setClassName('cursor secondary');
-		} else {
-			domNode.setClassName('cursor');
-		}
-		domNode.setHeight(this._lineHeight);
-		domNode.setTop(0);
-		domNode.setLeft(0);
-		domNode.domNode.setAttribute('role', 'presentation');
-		domNode.domNode.setAttribute('aria-hidden', 'true');
-		return domNode;
+	public getDomNode(): FastDomNode<HTMLElement> {
+		return this._domNode;
 	}
 
-	public getDomNode(): HTMLElement {
-		return this._domNode.domNode;
-	}
-
-	public getIsInEditableRange(): boolean {
-		return this._isInEditableRange;
-	}
-
-	public getPositionTop(): number {
-		return this._positionTop;
-	}
-
-	public getPosition(): IPosition {
+	public getPosition(): Position {
 		return this._position;
 	}
 
@@ -94,85 +99,123 @@ export class ViewCursor {
 		}
 	}
 
-	public onModelFlushed(): boolean {
-		this.updatePosition({
-			lineNumber: 1,
-			column: 1
-		});
-		this._isInEditableRange = true;
+	public onConfigurationChanged(e: viewEvents.ViewConfigurationChangedEvent): boolean {
+		const options = this._context.configuration.options;
+		const fontInfo = options.get(EditorOption.fontInfo);
+
+		this._cursorStyle = options.get(EditorOption.cursorStyle);
+		this._lineHeight = options.get(EditorOption.lineHeight);
+		this._typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
+		this._lineCursorWidth = Math.min(options.get(EditorOption.cursorWidth), this._typicalHalfwidthCharacterWidth);
+		Configuration.applyFontInfo(this._domNode, fontInfo);
+
 		return true;
 	}
 
-	public onCursorPositionChanged(position: IPosition, isInEditableRange: boolean): boolean {
-		this.updatePosition(position);
-		this._isInEditableRange = isInEditableRange;
+	public onCursorPositionChanged(position: Position): boolean {
+		this._position = position;
 		return true;
 	}
 
-	public onConfigurationChanged(e: IConfigurationChangedEvent): boolean {
-		if (e.lineHeight) {
-			this._lineHeight = this._context.configuration.editor.lineHeight;
-		}
-		if (e.viewInfo.cursorStyle) {
-			this._cursorStyle = this._context.configuration.editor.viewInfo.cursorStyle;
-		}
-		if (e.fontInfo) {
-			Configuration.applyFontInfo(this._domNode, this._context.configuration.editor.fontInfo);
-		}
-		return true;
-	}
+	private _prepareRender(ctx: RenderingContext): ViewCursorRenderData | null {
+		let textContent = '';
 
-	public prepareRender(ctx: IRenderingContext): void {
-		let visibleRange = ctx.visibleRangeForPosition(this._position);
-		if (visibleRange) {
-			this._positionTop = visibleRange.top;
-			this._positionLeft = visibleRange.left;
-			this._isInViewport = true;
-		} else {
-			this._isInViewport = false;
-		}
-	}
-
-	private _getRenderedContent(): string {
-		if (this._cursorStyle === TextEditorCursorStyle.Block) {
-			let lineContent = this._context.model.getLineContent(this._position.lineNumber);
-			return lineContent.charAt(this._position.column - 1);
-		}
-		return '';
-	}
-
-	public render(ctx: IRestrictedRenderingContext): IViewCursorRenderData {
-		if (this._isInViewport) {
-			let top = this._positionTop + ctx.viewportTop - ctx.bigNumbersDelta;
-			let renderContent = this._getRenderedContent();
-			if (this._lastRenderedContent !== renderContent) {
-				this._lastRenderedContent = renderContent;
-				this._domNode.domNode.textContent = this._lastRenderedContent;
+		if (this._cursorStyle === TextEditorCursorStyle.Line || this._cursorStyle === TextEditorCursorStyle.LineThin) {
+			const visibleRange = ctx.visibleRangeForPosition(this._position);
+			if (!visibleRange || visibleRange.outsideRenderedLine) {
+				// Outside viewport
+				return null;
 			}
 
-			this._domNode.setDisplay('block');
-			this._domNode.setLeft(this._positionLeft);
-			this._domNode.setTop(top);
-			this._domNode.setLineHeight(this._lineHeight);
-			this._domNode.setHeight(this._lineHeight);
+			let width: number;
+			if (this._cursorStyle === TextEditorCursorStyle.Line) {
+				width = dom.computeScreenAwareSize(this._lineCursorWidth > 0 ? this._lineCursorWidth : 2);
+				if (width > 2) {
+					const lineContent = this._context.model.getLineContent(this._position.lineNumber);
+					const nextCharLength = strings.nextCharLength(lineContent, this._position.column - 1);
+					textContent = lineContent.substr(this._position.column - 1, nextCharLength);
+				}
+			} else {
+				width = dom.computeScreenAwareSize(1);
+			}
 
-			return {
-				position: this._position,
-				contentTop: top,
-				contentLeft: this._positionLeft,
-				height: this._lineHeight,
-				width: 2
-			};
+			let left = visibleRange.left;
+			if (width >= 2 && left >= 1) {
+				// try to center cursor
+				left -= 1;
+			}
+
+			const top = ctx.getVerticalOffsetForLineNumber(this._position.lineNumber) - ctx.bigNumbersDelta;
+			return new ViewCursorRenderData(top, left, width, this._lineHeight, textContent, '');
 		}
 
-		this._domNode.setDisplay('none');
-		return null;
+		const lineContent = this._context.model.getLineContent(this._position.lineNumber);
+		const nextCharLength = strings.nextCharLength(lineContent, this._position.column - 1);
+		const visibleRangeForCharacter = ctx.linesVisibleRangesForRange(new Range(this._position.lineNumber, this._position.column, this._position.lineNumber, this._position.column + nextCharLength), false);
+		if (!visibleRangeForCharacter || visibleRangeForCharacter.length === 0) {
+			// Outside viewport
+			return null;
+		}
+
+		const firstVisibleRangeForCharacter = visibleRangeForCharacter[0];
+		if (firstVisibleRangeForCharacter.outsideRenderedLine || firstVisibleRangeForCharacter.ranges.length === 0) {
+			// Outside viewport
+			return null;
+		}
+
+		const range = firstVisibleRangeForCharacter.ranges[0];
+		const width = range.width < 1 ? this._typicalHalfwidthCharacterWidth : range.width;
+
+		let textContentClassName = '';
+		if (this._cursorStyle === TextEditorCursorStyle.Block) {
+			const lineData = this._context.model.getViewLineData(this._position.lineNumber);
+			textContent = lineContent.substr(this._position.column - 1, nextCharLength);
+			const tokenIndex = lineData.tokens.findTokenIndexAtOffset(this._position.column - 1);
+			textContentClassName = lineData.tokens.getClassName(tokenIndex);
+		}
+
+		let top = ctx.getVerticalOffsetForLineNumber(this._position.lineNumber) - ctx.bigNumbersDelta;
+		let height = this._lineHeight;
+
+		// Underline might interfere with clicking
+		if (this._cursorStyle === TextEditorCursorStyle.Underline || this._cursorStyle === TextEditorCursorStyle.UnderlineThin) {
+			top += this._lineHeight - 2;
+			height = 2;
+		}
+
+		return new ViewCursorRenderData(top, range.left, width, height, textContent, textContentClassName);
 	}
 
-	private updatePosition(newPosition: IPosition): void {
-		this._position = newPosition;
-		this._domNode.domNode.setAttribute('lineNumber', this._position.lineNumber.toString());
-		this._domNode.domNode.setAttribute('column', this._position.column.toString());
-		this._isInViewport = false;
+	public prepareRender(ctx: RenderingContext): void {
+		this._renderData = this._prepareRender(ctx);
+	}
+
+	public render(ctx: RestrictedRenderingContext): IViewCursorRenderData | null {
+		if (!this._renderData) {
+			this._domNode.setDisplay('none');
+			return null;
+		}
+
+		if (this._lastRenderedContent !== this._renderData.textContent) {
+			this._lastRenderedContent = this._renderData.textContent;
+			this._domNode.domNode.textContent = this._lastRenderedContent;
+		}
+
+		this._domNode.setClassName(`cursor ${MOUSE_CURSOR_TEXT_CSS_CLASS_NAME} ${this._renderData.textContentClassName}`);
+
+		this._domNode.setDisplay('block');
+		this._domNode.setTop(this._renderData.top);
+		this._domNode.setLeft(this._renderData.left);
+		this._domNode.setWidth(this._renderData.width);
+		this._domNode.setLineHeight(this._renderData.height);
+		this._domNode.setHeight(this._renderData.height);
+
+		return {
+			domNode: this._domNode.domNode,
+			position: this._position,
+			contentLeft: this._renderData.left,
+			height: this._renderData.height,
+			width: 2
+		};
 	}
 }

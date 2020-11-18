@@ -10,32 +10,31 @@ fi
 function code() {
 	cd $ROOT
 
-	# Node modules
-	test -d node_modules || ./scripts/npm.sh install
-
-	# Get electron
 	if [[ "$OSTYPE" == "darwin"* ]]; then
-		test -d .build/electron/Code\ -\ OSS.app || ./node_modules/.bin/gulp electron
+		NAME=`node -p "require('./product.json').nameLong"`
+		CODE="./.build/electron/$NAME.app/Contents/MacOS/Electron"
 	else
-		test -d .build/electron/code-oss || ./node_modules/.bin/gulp electron
+		NAME=`node -p "require('./product.json').applicationName"`
+		CODE=".build/electron/$NAME"
 	fi
 
-	# Build
-	test -d out || ./node_modules/.bin/gulp compile
+	# Get electron, compile, built-in extensions
+	if [[ -z "${VSCODE_SKIP_PRELAUNCH}" ]]; then
+		node build/lib/preLaunch.js
+	fi
 
-	# Launch Code
-	[[ "$OSTYPE" == "darwin"* ]] \
-		&& ELECTRON=.build/electron/Code\ -\ OSS.app/Contents/MacOS/Electron \
-		|| ELECTRON=.build/electron/code-oss
-
-	CLI="$ROOT/out/cli.js"
+	# Manage built-in extensions
+	if [[ "$1" == "--builtin" ]]; then
+		exec "$CODE" build/builtin
+		return
+	fi
 
 	ELECTRON_RUN_AS_NODE=1 \
 	NODE_ENV=development \
 	VSCODE_DEV=1 \
 	ELECTRON_ENABLE_LOGGING=1 \
 	ELECTRON_ENABLE_STACK_DUMPING=1 \
-	"$ELECTRON" --debug=5874 "$CLI" . "$@"
+	"$CODE" --inspect=5874 "$ROOT/out/cli.js" . "$@"
 }
 
 code "$@"

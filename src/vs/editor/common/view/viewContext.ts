@@ -2,39 +2,59 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import { IConfiguration } from 'vs/editor/common/editorCommon';
-import { EmitterEvent } from 'vs/base/common/eventEmitter';
-import { IViewModel } from 'vs/editor/common/viewModel/viewModel';
+import { ViewEventHandler } from 'vs/editor/common/viewModel/viewEventHandler';
+import { IViewLayout, IViewModel } from 'vs/editor/common/viewModel/viewModel';
+import { IColorTheme } from 'vs/platform/theme/common/themeService';
+import { ColorIdentifier } from 'vs/platform/theme/common/colorRegistry';
+import { Color } from 'vs/base/common/color';
+import { ColorScheme } from 'vs/platform/theme/common/theme';
 
-export interface IViewEventBus {
-	emit(eventType: string, data?: any): void;
-}
+export class EditorTheme {
 
-export interface IViewEventHandler {
-	handleEvents(events: EmitterEvent[]): void;
+	private _theme: IColorTheme;
+
+	public get type(): ColorScheme {
+		return this._theme.type;
+	}
+
+	constructor(theme: IColorTheme) {
+		this._theme = theme;
+	}
+
+	public update(theme: IColorTheme): void {
+		this._theme = theme;
+	}
+
+	public getColor(color: ColorIdentifier): Color | undefined {
+		return this._theme.getColor(color);
+	}
 }
 
 export class ViewContext {
 
-	public configuration: IConfiguration;
-	public model: IViewModel;
-	public privateViewEventBus: IViewEventBus;
-	public addEventHandler: (eventHandler: IViewEventHandler) => void;
-	public removeEventHandler: (eventHandler: IViewEventHandler) => void;
+	public readonly configuration: IConfiguration;
+	public readonly model: IViewModel;
+	public readonly viewLayout: IViewLayout;
+	public readonly theme: EditorTheme;
 
 	constructor(
 		configuration: IConfiguration,
-		model: IViewModel,
-		privateViewEventBus: IViewEventBus,
-		addEventHandler: (eventHandler: IViewEventHandler) => void,
-		removeEventHandler: (eventHandler: IViewEventHandler) => void
+		theme: IColorTheme,
+		model: IViewModel
 	) {
 		this.configuration = configuration;
+		this.theme = new EditorTheme(theme);
 		this.model = model;
-		this.privateViewEventBus = privateViewEventBus;
-		this.addEventHandler = addEventHandler;
-		this.removeEventHandler = removeEventHandler;
+		this.viewLayout = model.viewLayout;
+	}
+
+	public addEventHandler(eventHandler: ViewEventHandler): void {
+		this.model.addViewEventHandler(eventHandler);
+	}
+
+	public removeEventHandler(eventHandler: ViewEventHandler): void {
+		this.model.removeViewEventHandler(eventHandler);
 	}
 }

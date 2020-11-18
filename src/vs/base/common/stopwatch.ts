@@ -2,11 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import { globals } from 'vs/base/common/platform';
 
-var hasPerformanceNow = (globals.performance && typeof globals.performance.now === 'function');
+const hasPerformanceNow = (globals.performance && typeof globals.performance.now === 'function');
 
 export class StopWatch {
 

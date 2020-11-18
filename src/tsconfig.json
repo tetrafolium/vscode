@@ -1,13 +1,28 @@
 {
+	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
-		"module": "amd",
-		"moduleResolution": "classic",
-		"noImplicitAny": false,
 		"removeComments": false,
 		"preserveConstEnums": true,
-		"target": "es5",
 		"sourceMap": false,
-		"experimentalDecorators": true,
-		"declaration": true
-	}
+		"outDir": "../out/vs",
+		"target": "es2017",
+		"types": [
+			"keytar",
+			"mocha",
+			"semver",
+			"sinon",
+			"winreg",
+			"trusted-types"
+		],
+		"plugins": [
+			{
+				// the path is relative to TS server, "../../" points to the root dir
+				"name": "../../node_modules/tsec/lib/tsec_lib/language_service_plugin.js"
+			}
+		]
+	},
+	"include": [
+		"./typings",
+		"./vs"
+	]
 }

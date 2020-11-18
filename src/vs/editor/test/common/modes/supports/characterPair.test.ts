@@ -2,11 +2,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import * as assert from 'assert';
+import { StandardTokenType } from 'vs/editor/common/modes';
 import { CharacterPairSupport } from 'vs/editor/common/modes/supports/characterPair';
 import { TokenText, createFakeScopedLineTokens } from 'vs/editor/test/common/modesTestUtils';
+import { StandardAutoClosingPairConditional } from 'vs/editor/common/modes/languageConfiguration';
 
 suite('CharacterPairSupport', () => {
 
@@ -52,70 +53,78 @@ suite('CharacterPairSupport', () => {
 		assert.deepEqual(characaterPairSupport.getSurroundingPairs(), []);
 	});
 
+	function findAutoClosingPair(characterPairSupport: CharacterPairSupport, character: string): StandardAutoClosingPairConditional | undefined {
+		return characterPairSupport.getAutoClosingPairs().find(autoClosingPair => autoClosingPair.open === character);
+	}
+
 	function testShouldAutoClose(characterPairSupport: CharacterPairSupport, line: TokenText[], character: string, column: number): boolean {
-		return characterPairSupport.shouldAutoClosePair(character, createFakeScopedLineTokens('test', line), column);
+		const autoClosingPair = findAutoClosingPair(characterPairSupport, character);
+		if (!autoClosingPair) {
+			return false;
+		}
+		return CharacterPairSupport.shouldAutoClosePair(autoClosingPair, createFakeScopedLineTokens(line), column);
 	}
 
 	test('shouldAutoClosePair in empty line', () => {
 		let sup = new CharacterPairSupport({ autoClosingPairs: [{ open: '{', close: '}', notIn: ['string', 'comment'] }] });
-		assert.equal(testShouldAutoClose(sup, [], 'a', 1), true);
+		assert.equal(testShouldAutoClose(sup, [], 'a', 1), false);
 		assert.equal(testShouldAutoClose(sup, [], '{', 1), true);
 	});
 
 	test('shouldAutoClosePair in not interesting line 1', () => {
 		let sup = new CharacterPairSupport({ autoClosingPairs: [{ open: '{', close: '}', notIn: ['string', 'comment'] }] });
-		assert.equal(testShouldAutoClose(sup, [{ text: 'do', type: 'keyword' }], '{', 3), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'do', type: 'keyword' }], 'a', 3), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'do', type: StandardTokenType.Other }], '{', 3), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'do', type: StandardTokenType.Other }], 'a', 3), false);
 	});
 
 	test('shouldAutoClosePair in not interesting line 2', () => {
 		let sup = new CharacterPairSupport({ autoClosingPairs: [{ open: '{', close: '}' }] });
-		assert.equal(testShouldAutoClose(sup, [{ text: 'do', type: 'string' }], '{', 3), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'do', type: 'string' }], 'a', 3), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'do', type: StandardTokenType.String }], '{', 3), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'do', type: StandardTokenType.String }], 'a', 3), false);
 	});
 
 	test('shouldAutoClosePair in interesting line 1', () => {
 		let sup = new CharacterPairSupport({ autoClosingPairs: [{ open: '{', close: '}', notIn: ['string', 'comment'] }] });
-		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: 'string' }], '{', 1), false);
-		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: 'string' }], 'a', 1), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: 'string' }], '{', 2), false);
-		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: 'string' }], 'a', 2), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: 'string' }], '{', 3), false);
-		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: 'string' }], 'a', 3), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: 'string' }], '{', 4), false);
-		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: 'string' }], 'a', 4), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: StandardTokenType.String }], '{', 1), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: StandardTokenType.String }], 'a', 1), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: StandardTokenType.String }], '{', 2), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: StandardTokenType.String }], 'a', 2), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: StandardTokenType.String }], '{', 3), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: StandardTokenType.String }], 'a', 3), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: StandardTokenType.String }], '{', 4), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: '"a"', type: StandardTokenType.String }], 'a', 4), false);
 	});
 
 	test('shouldAutoClosePair in interesting line 2', () => {
 		let sup = new CharacterPairSupport({ autoClosingPairs: [{ open: '{', close: '}', notIn: ['string', 'comment'] }] });
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], '{', 1), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], 'a', 1), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], '{', 2), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], 'a', 2), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], '{', 3), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], 'a', 3), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], '{', 4), false);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], 'a', 4), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], '{', 5), false);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], 'a', 5), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], '{', 6), false);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], 'a', 6), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], '{', 7), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: 'op' }, { text: '"a"', type: 'string' }, { text: ';', type: 'punct' }], 'a', 7), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], '{', 1), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], 'a', 1), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], '{', 2), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], 'a', 2), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], '{', 3), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], 'a', 3), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], '{', 4), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], 'a', 4), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], '{', 5), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], 'a', 5), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], '{', 6), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], 'a', 6), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], '{', 7), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: 'x=', type: StandardTokenType.Other }, { text: '"a"', type: StandardTokenType.String }, { text: ';', type: StandardTokenType.Other }], 'a', 7), false);
 	});
 
 	test('shouldAutoClosePair in interesting line 3', () => {
 		let sup = new CharacterPairSupport({ autoClosingPairs: [{ open: '{', close: '}', notIn: ['string', 'comment'] }] });
-		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: '' }, { text: '//a', type: 'comment' }], '{', 1), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: '' }, { text: '//a', type: 'comment' }], 'a', 1), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: '' }, { text: '//a', type: 'comment' }], '{', 2), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: '' }, { text: '//a', type: 'comment' }], 'a', 2), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: '' }, { text: '//a', type: 'comment' }], '{', 3), false);
-		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: '' }, { text: '//a', type: 'comment' }], 'a', 3), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: '' }, { text: '//a', type: 'comment' }], '{', 4), false);
-		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: '' }, { text: '//a', type: 'comment' }], 'a', 4), true);
-		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: '' }, { text: '//a', type: 'comment' }], '{', 5), false);
-		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: '' }, { text: '//a', type: 'comment' }], 'a', 5), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: StandardTokenType.Other }, { text: '//a', type: StandardTokenType.Comment }], '{', 1), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: StandardTokenType.Other }, { text: '//a', type: StandardTokenType.Comment }], 'a', 1), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: StandardTokenType.Other }, { text: '//a', type: StandardTokenType.Comment }], '{', 2), true);
+		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: StandardTokenType.Other }, { text: '//a', type: StandardTokenType.Comment }], 'a', 2), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: StandardTokenType.Other }, { text: '//a', type: StandardTokenType.Comment }], '{', 3), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: StandardTokenType.Other }, { text: '//a', type: StandardTokenType.Comment }], 'a', 3), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: StandardTokenType.Other }, { text: '//a', type: StandardTokenType.Comment }], '{', 4), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: StandardTokenType.Other }, { text: '//a', type: StandardTokenType.Comment }], 'a', 4), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: StandardTokenType.Other }, { text: '//a', type: StandardTokenType.Comment }], '{', 5), false);
+		assert.equal(testShouldAutoClose(sup, [{ text: ' ', type: StandardTokenType.Other }, { text: '//a', type: StandardTokenType.Comment }], 'a', 5), false);
 	});
 
 });

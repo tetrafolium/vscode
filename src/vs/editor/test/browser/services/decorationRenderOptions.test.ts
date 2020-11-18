@@ -2,74 +2,177 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import * as assert from 'assert';
-import URI from 'vs/base/common/uri';
-import * as dom from 'vs/base/browser/dom';
-import { CodeEditorServiceImpl } from 'vs/editor/browser/services/codeEditorServiceImpl';
+import * as platform from 'vs/base/common/platform';
+import { URI } from 'vs/base/common/uri';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { CodeEditorServiceImpl, GlobalStyleSheet } from 'vs/editor/browser/services/codeEditorServiceImpl';
 import { IDecorationRenderOptions } from 'vs/editor/common/editorCommon';
+import { IResourceEditorInput } from 'vs/platform/editor/common/editor';
+import { TestColorTheme, TestThemeService } from 'vs/platform/theme/test/common/testThemeService';
 
-suite('Browser Services - EditorLayoutProvider', () => {
-	var options: IDecorationRenderOptions = {
-		gutterIconPath: URI.parse('https://github.com/Microsoft/vscode/blob/master/resources/linux/code.png'),
+const themeServiceMock = new TestThemeService();
+
+class TestCodeEditorServiceImpl extends CodeEditorServiceImpl {
+	getActiveCodeEditor(): ICodeEditor | null {
+		return null;
+	}
+
+	openCodeEditor(input: IResourceEditorInput, source: ICodeEditor | null, sideBySide?: boolean): Promise<ICodeEditor | null> {
+		return Promise.resolve(null);
+	}
+}
+
+class TestGlobalStyleSheet extends GlobalStyleSheet {
+
+	public rules: string[] = [];
+
+	constructor() {
+		super(null!);
+	}
+
+	public insertRule(rule: string, index?: number): void {
+		this.rules.unshift(rule);
+	}
+
+	public removeRulesContainingSelector(ruleName: string): void {
+		for (let i = 0; i < this.rules.length; i++) {
+			if (this.rules[i].indexOf(ruleName) >= 0) {
+				this.rules.splice(i, 1);
+				i--;
+			}
+		}
+	}
+
+	public read(): string {
+		return this.rules.join('\n');
+	}
+}
+
+suite('Decoration Render Options', () => {
+	let options: IDecorationRenderOptions = {
+		gutterIconPath: URI.parse('https://github.com/microsoft/vscode/blob/master/resources/linux/code.png'),
 		gutterIconSize: 'contain',
 		backgroundColor: 'red',
 		borderColor: 'yellow'
 	};
 	test('register and resolve decoration type', () => {
-		var s = new CodeEditorServiceImpl();
+		let s = new TestCodeEditorServiceImpl(themeServiceMock);
 		s.registerDecorationType('example', options);
 		assert.notEqual(s.resolveDecorationOptions('example', false), undefined);
 	});
 	test('remove decoration type', () => {
-		var s = new CodeEditorServiceImpl();
+		let s = new TestCodeEditorServiceImpl(themeServiceMock);
 		s.registerDecorationType('example', options);
 		assert.notEqual(s.resolveDecorationOptions('example', false), undefined);
 		s.removeDecorationType('example');
 		assert.throws(() => s.resolveDecorationOptions('example', false));
 	});
+
+	function readStyleSheet(styleSheet: TestGlobalStyleSheet): string {
+		return styleSheet.read();
+	}
+
 	test('css properties', () => {
-		var styleSheet = dom.createStyleSheet();
-		var s = new CodeEditorServiceImpl(styleSheet);
+		const styleSheet = new TestGlobalStyleSheet();
+		const s = new TestCodeEditorServiceImpl(themeServiceMock, styleSheet);
 		s.registerDecorationType('example', options);
-		var sheet = styleSheet.sheet.toString();
-		assert(sheet.indexOf('background: url(\'https://github.com/Microsoft/vscode/blob/master/resources/linux/code.png\') center center no-repeat;') > 0);
-		assert(sheet.indexOf('background-size: contain;') > 0);
-		assert(sheet.indexOf('border-color: yellow;') > 0);
-		assert(sheet.indexOf('background-color: red;') > 0);
+		const sheet = readStyleSheet(styleSheet);
+		assert(sheet.indexOf(`{background:url('https://github.com/microsoft/vscode/blob/master/resources/linux/code.png') center center no-repeat;background-size:contain;}`) >= 0);
+		assert(sheet.indexOf(`{background-color:red;border-color:yellow;box-sizing: border-box;}`) >= 0);
+	});
+
+	test('theme color', () => {
+		const options: IDecorationRenderOptions = {
+			backgroundColor: { id: 'editorBackground' },
+			borderColor: { id: 'editorBorder' },
+		};
+
+		const styleSheet = new TestGlobalStyleSheet();
+		const themeService = new TestThemeService(new TestColorTheme({
+			editorBackground: '#FF0000'
+		}));
+		const s = new TestCodeEditorServiceImpl(themeService, styleSheet);
+		s.registerDecorationType('example', options);
+		assert.equal(readStyleSheet(styleSheet), '.monaco-editor .ced-example-0 {background-color:#ff0000;border-color:transparent;box-sizing: border-box;}');
+
+		themeService.setTheme(new TestColorTheme({
+			editorBackground: '#EE0000',
+			editorBorder: '#00FFFF'
+		}));
+		assert.equal(readStyleSheet(styleSheet), '.monaco-editor .ced-example-0 {background-color:#ee0000;border-color:#00ffff;box-sizing: border-box;}');
+
+		s.removeDecorationType('example');
+		assert.equal(readStyleSheet(styleSheet), '');
+	});
+
+	test('theme overrides', () => {
+		const options: IDecorationRenderOptions = {
+			color: { id: 'editorBackground' },
+			light: {
+				color: '#FF00FF'
+			},
+			dark: {
+				color: '#000000',
+				after: {
+					color: { id: 'infoForeground' }
+				}
+			}
+		};
+
+		const styleSheet = new TestGlobalStyleSheet();
+		const themeService = new TestThemeService(new TestColorTheme({
+			editorBackground: '#FF0000',
+			infoForeground: '#444444'
+		}));
+		const s = new TestCodeEditorServiceImpl(themeService, styleSheet);
+		s.registerDecorationType('example', options);
+		const expected = [
+			'.vs-dark.monaco-editor .ced-example-4::after, .hc-black.monaco-editor .ced-example-4::after {color:#444444 !important;}',
+			'.vs-dark.monaco-editor .ced-example-1, .hc-black.monaco-editor .ced-example-1 {color:#000000 !important;}',
+			'.vs.monaco-editor .ced-example-1 {color:#FF00FF !important;}',
+			'.monaco-editor .ced-example-1 {color:#ff0000 !important;}'
+		].join('\n');
+		assert.equal(readStyleSheet(styleSheet), expected);
+
+		s.removeDecorationType('example');
+		assert.equal(readStyleSheet(styleSheet), '');
 	});
 
 	test('css properties, gutterIconPaths', () => {
-		var styleSheet = dom.createStyleSheet();
-
-		// unix file path (used as string)
-		var s = new CodeEditorServiceImpl(styleSheet);
-		s.registerDecorationType('example', { gutterIconPath: '/Users/foo/bar.png' });
-		var sheet = styleSheet.sheet.toString();
-		assert(sheet.indexOf('background: url(\'file:///Users/foo/bar.png\') center center no-repeat;') > 0);
-
-		// windows file path (used as string)
-		s = new CodeEditorServiceImpl(styleSheet);
-		s.registerDecorationType('example', { gutterIconPath: 'c:\\files\\miles\\more.png' });
-		sheet = styleSheet.sheet.toString();
-		assert(sheet.indexOf('background: url(\'file:///c%3A/files/miles/more.png\') center center no-repeat;') > 0);
+		const styleSheet = new TestGlobalStyleSheet();
+		const s = new TestCodeEditorServiceImpl(themeServiceMock, styleSheet);
 
 		// URI, only minimal encoding
-		s = new CodeEditorServiceImpl(styleSheet);
 		s.registerDecorationType('example', { gutterIconPath: URI.parse('data:image/svg+xml;base64,PHN2ZyB4b+') });
-		sheet = styleSheet.sheet.toString();
-		assert(sheet.indexOf('background: url(\'data:image/svg+xml;base64,PHN2ZyB4b+\') center center no-repeat;') > 0);
+		assert(readStyleSheet(styleSheet).indexOf(`{background:url('data:image/svg+xml;base64,PHN2ZyB4b+') center center no-repeat;}`) > 0);
+		s.removeDecorationType('example');
 
-		// single quote must always be escaped/encoded
-		s = new CodeEditorServiceImpl(styleSheet);
-		s.registerDecorationType('example', { gutterIconPath: '/Users/foo/b\'ar.png' });
-		sheet = styleSheet.sheet.toString();
-		assert(sheet.indexOf('background: url(\'file:///Users/foo/b%27ar.png\') center center no-repeat;') > 0, sheet);
+		if (platform.isWindows) {
+			// windows file path (used as string)
+			s.registerDecorationType('example', { gutterIconPath: URI.file('c:\\files\\miles\\more.png') });
+			assert(readStyleSheet(styleSheet).indexOf(`{background:url('file:///c:/files/miles/more.png') center center no-repeat;}`) > 0);
+			s.removeDecorationType('example');
 
-		s = new CodeEditorServiceImpl(styleSheet);
+			// single quote must always be escaped/encoded
+			s.registerDecorationType('example', { gutterIconPath: URI.file('c:\\files\\foo\\b\'ar.png') });
+			assert(readStyleSheet(styleSheet).indexOf(`{background:url('file:///c:/files/foo/b%27ar.png') center center no-repeat;}`) > 0);
+			s.removeDecorationType('example');
+		} else {
+			// unix file path (used as string)
+			s.registerDecorationType('example', { gutterIconPath: URI.file('/Users/foo/bar.png') });
+			assert(readStyleSheet(styleSheet).indexOf(`{background:url('file:///Users/foo/bar.png') center center no-repeat;}`) > 0);
+			s.removeDecorationType('example');
+
+			// single quote must always be escaped/encoded
+			s.registerDecorationType('example', { gutterIconPath: URI.file('/Users/foo/b\'ar.png') });
+			assert(readStyleSheet(styleSheet).indexOf(`{background:url('file:///Users/foo/b%27ar.png') center center no-repeat;}`) > 0);
+			s.removeDecorationType('example');
+		}
+
 		s.registerDecorationType('example', { gutterIconPath: URI.parse('http://test/pa\'th') });
-		sheet = styleSheet.sheet.toString();
-		assert(sheet.indexOf('background: url(\'http://test/pa%27th\') center center no-repeat;') > 0, sheet);
+		assert(readStyleSheet(styleSheet).indexOf(`{background:url('http://test/pa%27th') center center no-repeat;}`) > 0);
+		s.removeDecorationType('example');
 	});
 });

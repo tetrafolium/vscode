@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -19,22 +19,20 @@ else
 fi
 
 # Node modules
-test -d node_modules || ./scripts/npm.sh install
+test -d node_modules || yarn
 
 # Get electron
-test -f "$CODE" || ./node_modules/.bin/gulp electron
-
-# Build
-test -d out || ./node_modules/.bin/gulp compile
+yarn electron
 
 # Unit Tests
-export VSCODE_DEV=1
 if [[ "$OSTYPE" == "darwin"* ]]; then
-	cd $ROOT ; ulimit -n 4096 ; ELECTRON_RUN_AS_NODE=1 \
+	cd $ROOT ; ulimit -n 4096 ; \
+		ELECTRON_ENABLE_LOGGING=1 \
 		"$CODE" \
-		node_modules/mocha/bin/_mocha "$@"
+		test/unit/electron/index.js "$@"
 else
-	cd $ROOT ; ELECTRON_RUN_AS_NODE=1 \
+	cd $ROOT ; \
+		ELECTRON_ENABLE_LOGGING=1 \
 		"$CODE" \
-		node_modules/mocha/bin/_mocha "$@"
+		test/unit/electron/index.js --no-sandbox "$@" # Electron 6 introduces a chrome-sandbox that requires root to run. This can fail. Disable sandbox via --no-sandbox.
 fi
